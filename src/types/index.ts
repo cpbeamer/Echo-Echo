@@ -13,3 +13,7 @@ export type {
 } from './agent';
 
 export { DEFAULT_CONFIG } from './agent';
+
+export type { BrainSettings, OllamaStatus } from './brain';
+
+export { DEFAULT_BRAIN_SETTINGS } from './brain';

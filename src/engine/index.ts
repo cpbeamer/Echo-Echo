@@ -8,3 +8,10 @@ export { mutateAgentFromText, applyDNAUpdate } from './dna-mutation';
 export { attemptMemeSwap, ideologicalSimilarity, processMemeSwaps } from './meme-swap';
 export { detectConflicts, resolveConflict } from './conflict';
 export { tickPhysics } from './physics';
+
+// Epic 1.3 – Brain / LLM Integration
+export { detectOllama, listModels, generateCompletion } from './ollama-client';
+export { parseDNAResponse } from './dna-parser';
+export { truncateLoreCache, estimateTokens, estimateLoreCacheTokens } from './context-truncator';
+export { ThoughtOrchestrator } from './thought-orchestrator';
+export { buildMutationPrompt } from './prompt-builder';
