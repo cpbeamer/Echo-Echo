@@ -21,6 +21,16 @@ export interface DNAVector {
   order_chaos: number;
 }
 
+/** A single long-term memory entry stored per-agent. */
+export interface MemoryEntry {
+  /** Human-readable summary of what happened. */
+  text: string;
+  /** Simulation tick when this memory was formed. */
+  tick: number;
+  /** Pre-extracted lowercase keywords for retrieval. */
+  keywords: string[];
+}
+
 /** The full DNA payload attached to every agent. */
 export interface AgentDNA {
   /** Unique agent identifier. */
@@ -66,6 +76,8 @@ export interface Agent extends AgentDNA {
   parentIds: [string, string] | null;
   /** Tick number when this agent last reproduced, used for cooldown. */
   lastReproductionTick: number;
+  /** Long-term memory entries that persist across lore-cache truncations. */
+  memory: MemoryEntry[];
 }
 
 /** Structured update returned by the LLM DNA mutation pipeline. */
@@ -109,6 +121,11 @@ export interface SimulationConfig {
   naturalSelectionEnabled: boolean;
   /** Extra energy-drain multiplier for agents with extreme (near 0 or 1) DNA values. */
   naturalSelectionPressure: number;
+
+  // --- Persistent Memory (Epic 2.2) ---
+
+  /** Maximum long-term memory entries retained per agent. */
+  maxMemoryEntries: number;
 }
 
 export const DEFAULT_CONFIG: SimulationConfig = {
@@ -127,16 +144,24 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   reproductionCooldown: 100,
   naturalSelectionEnabled: false,
   naturalSelectionPressure: 1.5,
+
+  // Persistent Memory defaults
+  maxMemoryEntries: 50,
 };
+
+/** The kind of data bomb: standard mutates DNA, amnesia wipes memory. */
+export type DataBombType = 'standard' | 'amnesia';
 
 /** Payload for dropping a data bomb onto the grid. */
 export interface DataBomb {
-  /** Raw text payload that will influence affected agents. */
+  /** Raw text payload that will influence affected agents (ignored for amnesia). */
   text: string;
   /** Grid coordinate where the bomb is dropped. */
   target: Vec2;
   /** Blast radius in grid cells (Manhattan distance). */
   radius: number;
+  /** Bomb variant. Defaults to 'standard' if omitted. */
+  type: DataBombType;
 }
 
 /** Recorded history entry for a detonated data bomb. */

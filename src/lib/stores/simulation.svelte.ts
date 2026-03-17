@@ -12,7 +12,7 @@ import { createAgents } from '../../engine/agent-factory';
 import { tickPhysics } from '../../engine/physics';
 import { processMemeSwaps } from '../../engine/meme-swap';
 import { detectConflicts, resolveConflict } from '../../engine/conflict';
-import { detonateDataBomb } from '../../engine/blast-radius';
+import { detonateDataBomb, detonateAmnesiaBomb } from '../../engine/blast-radius';
 import { ThoughtOrchestrator } from '../../engine/thought-orchestrator';
 import {
   tickEnergy,
@@ -190,14 +190,22 @@ class SimulationState {
    * Detonates immediately, records to history, and spawns a shockwave.
    */
   dropDataBomb(bomb: DataBomb): void {
-    const affectedIds = detonateDataBomb(this.agents, bomb);
+    const bombType = bomb.type ?? 'standard';
+
+    const affectedIds =
+      bombType === 'amnesia'
+        ? detonateAmnesiaBomb(this.agents, bomb)
+        : detonateDataBomb(this.agents, bomb);
 
     const record: DataBombRecord = {
       ...bomb,
       id: `bomb-${nextBombId++}`,
       timestamp: Date.now(),
       affectedAgentIds: affectedIds,
-      contentPreview: bomb.text.slice(0, 80).replace(/\n/g, ' '),
+      contentPreview:
+        bombType === 'amnesia'
+          ? '[Amnesia Bomb]'
+          : bomb.text.slice(0, 80).replace(/\n/g, ' '),
     };
 
     // Newest first
@@ -217,12 +225,21 @@ class SimulationState {
     this.isPickingTarget = false;
 
     // Newsfeed event
-    newsfeed.push({
-      type: 'data_bomb',
-      message: `💣 Data bomb hit ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)})`,
-      affectedCount: affectedIds.length,
-      target: { ...bomb.target },
-    });
+    if (bombType === 'amnesia') {
+      newsfeed.push({
+        type: 'amnesia_bomb',
+        message: `🧹 Amnesia bomb wiped ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)})`,
+        affectedCount: affectedIds.length,
+        target: { ...bomb.target },
+      });
+    } else {
+      newsfeed.push({
+        type: 'data_bomb',
+        message: `💣 Data bomb hit ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)})`,
+        affectedCount: affectedIds.length,
+        target: { ...bomb.target },
+      });
+    }
   }
 
   /** Highlight agents from a specific data bomb record. */

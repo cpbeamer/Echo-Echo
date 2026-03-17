@@ -66,6 +66,7 @@ export function createAgent(
     adjacencyTicks: new Map(),
     parentIds: null,
     lastReproductionTick: -Infinity,
+    memory: [],
   };
 }
 
@@ -110,6 +111,16 @@ export function createChildAgent(
   // Merge lingo dictionaries (parent A entries take precedence on key conflicts)
   const mergedLingo: Record<string, string> = { ...parentB.lingo, ...parentA.lingo };
 
+  // Merge parents' long-term memories: interleave and cap
+  const mergedMemory: typeof parentA.memory = [];
+  const maxMem = config.maxMemoryEntries;
+  for (let i = 0; i < Math.max(parentA.memory.length, parentB.memory.length); i++) {
+    if (mergedMemory.length >= maxMem) break;
+    if (i < parentA.memory.length) mergedMemory.push(parentA.memory[i]);
+    if (mergedMemory.length >= maxMem) break;
+    if (i < parentB.memory.length) mergedMemory.push(parentB.memory[i]);
+  }
+
   return {
     id,
     vector,
@@ -129,6 +140,7 @@ export function createChildAgent(
     adjacencyTicks: new Map(),
     parentIds: [parentA.id, parentB.id],
     lastReproductionTick: tick,
+    memory: mergedMemory,
   };
 }
 

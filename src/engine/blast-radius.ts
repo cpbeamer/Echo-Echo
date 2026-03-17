@@ -7,6 +7,7 @@
 
 import type { Agent, DataBomb, Vec2 } from '../types';
 import { mutateAgentFromText } from './dna-mutation';
+import { clearMemory } from './memory-store';
 
 /**
  * Calculate the Manhattan distance between two 2D points.
@@ -34,6 +35,24 @@ export function detonateDataBomb(agents: Agent[], bomb: DataBomb): string[] {
 
   for (const agent of affected) {
     mutateAgentFromText(agent, bomb.text);
+  }
+
+  return affected.map((a) => a.id);
+}
+
+/**
+ * Detonate an amnesia bomb: wipe memory, lore-cache, and lingo for all
+ * agents within the blast radius. Agents reset to baseline behavior.
+ *
+ * Returns the IDs of all affected agents.
+ */
+export function detonateAmnesiaBomb(agents: Agent[], bomb: DataBomb): string[] {
+  const affected = findAgentsInBlastRadius(agents, bomb.target, bomb.radius);
+
+  for (const agent of affected) {
+    clearMemory(agent);
+    agent.loreCache = [];
+    agent.lingo = {};
   }
 
   return affected.map((a) => a.id);

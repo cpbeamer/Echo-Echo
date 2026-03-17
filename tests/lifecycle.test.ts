@@ -31,6 +31,7 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
     adjacencyTicks: new Map(),
     parentIds: null,
     lastReproductionTick: -Infinity,
+    memory: [],
     ...overrides,
   };
 }

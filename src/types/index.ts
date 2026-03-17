@@ -12,7 +12,9 @@ export type {
   SimulationConfig,
   DataBomb,
   DataBombRecord,
+  DataBombType,
   Shockwave,
+  MemoryEntry,
 } from './agent';
 
 export { DEFAULT_CONFIG } from './agent';
@@ -29,6 +31,7 @@ export type {
   DataBombEvent,
   AgentDeathEvent,
   AgentBirthEvent,
+  AmnesiaBombEvent,
   LingoCluster,
   LingoTerm,
 } from './hud';

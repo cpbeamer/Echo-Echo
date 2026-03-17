@@ -6,6 +6,7 @@
  */
 
 import type { Agent } from '../types';
+import type { MemoryEntry } from '../types/agent';
 
 // Static prompt template (kept in sync with src/engine/prompts/dna-mutation.txt)
 const TEMPLATE = `You are the cognitive engine of an autonomous agent in the Synaptic Sandbox simulation.
@@ -23,6 +24,9 @@ Your job is to analyze new information ("Data Bomb" text) and determine how it s
 
 **Current Lingo (Slang Dictionary):**
 {{lingo}}
+
+**Relevant Long-Term Memories:**
+{{memories}}
 
 ## The Data Bomb
 
@@ -63,8 +67,13 @@ Rules:
 
 /**
  * Build a DNA mutation prompt by injecting agent context into the template.
+ * Optionally injects the most relevant long-term memories.
  */
-export function buildMutationPrompt(agent: Agent, dataBombText: string): string {
+export function buildMutationPrompt(
+  agent: Agent,
+  dataBombText: string,
+  memories: MemoryEntry[] = [],
+): string {
   const loreCacheStr =
     agent.loreCache.length > 0
       ? agent.loreCache.map((e, i) => `${i + 1}. ${e}`).join('\n')
@@ -76,10 +85,16 @@ export function buildMutationPrompt(agent: Agent, dataBombText: string): string 
       ? lingoEntries.map(([term, meaning]) => `- "${term}": ${meaning}`).join('\n')
       : '(empty — no slang adopted yet)';
 
+  const memoriesStr =
+    memories.length > 0
+      ? memories.map((m, i) => `${i + 1}. [Tick ${m.tick}] ${m.text}`).join('\n')
+      : '(no relevant memories)';
+
   return TEMPLATE.replace('{{analytical_emotional}}', agent.vector.analytical_emotional.toFixed(2))
     .replace('{{altruistic_selfish}}', agent.vector.altruistic_selfish.toFixed(2))
     .replace('{{order_chaos}}', agent.vector.order_chaos.toFixed(2))
     .replace('{{lore_cache}}', loreCacheStr)
     .replace('{{lingo}}', lingoStr)
+    .replace('{{memories}}', memoriesStr)
     .replace('{{data_bomb_text}}', dataBombText);
 }

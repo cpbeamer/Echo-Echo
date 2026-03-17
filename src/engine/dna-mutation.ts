@@ -10,6 +10,7 @@
 import type { Agent, DNAUpdate, DNAVector } from '../types';
 import { classifyFaction } from './factions';
 import { dnaToColor } from './agent-factory';
+import { addMemory } from './memory-store';
 
 /** Clamp a number to [0, 1]. */
 function clamp01(value: number): number {
@@ -121,6 +122,9 @@ export function mutateAgentFromText(agent: Agent, rawText: string, delta: number
   const preview = rawText.slice(0, 80).replace(/\n/g, ' ');
   agent.loreCache.push(`[Data Bomb] "${preview}..."`);
 
+  // Also persist as a long-term memory
+  addMemory(agent, `[Data Bomb] "${preview}..."`, 0);
+
   // Trim lore-cache to max 10 entries
   if (agent.loreCache.length > 10) {
     agent.loreCache = agent.loreCache.slice(-10);
@@ -149,6 +153,11 @@ export function applyDNAUpdate(agent: Agent, update: DNAUpdate): void {
   agent.loreCache.push(...update.newLore);
   if (agent.loreCache.length > 10) {
     agent.loreCache = agent.loreCache.slice(-10);
+  }
+
+  // Persist new lore as long-term memory
+  for (const lore of update.newLore) {
+    addMemory(agent, lore, 0);
   }
 
   // Merge new lingo

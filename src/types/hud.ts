@@ -11,7 +11,8 @@ export type SimulationEvent =
   | FactionChangeEvent
   | DataBombEvent
   | AgentDeathEvent
-  | AgentBirthEvent;
+  | AgentBirthEvent
+  | AmnesiaBombEvent;
 
 interface BaseEvent {
   /** Unique event ID. */
@@ -61,6 +62,13 @@ export interface AgentBirthEvent extends BaseEvent {
   parentIds: [string, string];
   /** ID of the newly spawned child agent. */
   childId: string;
+}
+
+export interface AmnesiaBombEvent extends BaseEvent {
+  type: 'amnesia_bomb';
+  /** Number of agents whose memory was wiped. */
+  affectedCount: number;
+  target: Vec2;
 }
 
 /** A spatial cluster of agents with their aggregated lingo terms. */

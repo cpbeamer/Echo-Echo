@@ -120,6 +120,26 @@
         </dl>
       {/if}
     </section>
+
+    <!-- Long-Term Memory -->
+    <section class="section">
+      <h3>Long-Term Memory ({agent.memory.length})</h3>
+      {#if agent.memory.length === 0}
+        <p class="empty-state">No memories formed yet.</p>
+      {:else}
+        <ul class="memory-list">
+          {#each agent.memory.slice(-10).reverse() as mem, i (i)}
+            <li>
+              <span class="memory-tick">T{mem.tick}</span>
+              <span class="memory-text">{mem.text}</span>
+            </li>
+          {/each}
+        </ul>
+        {#if agent.memory.length > 10}
+          <p class="memory-overflow">… and {agent.memory.length - 10} more</p>
+        {/if}
+      {/if}
+    </section>
   </aside>
 {/if}
 
@@ -308,5 +328,49 @@
     color: #888;
     font-size: 11px;
     margin: 0;
+  }
+
+  .memory-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .memory-list li {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    font-size: 11px;
+    padding: 4px 6px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 4px;
+    word-break: break-word;
+  }
+
+  .memory-tick {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.12);
+    padding: 1px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    line-height: 1.4;
+  }
+
+  .memory-text {
+    color: #aaa;
+  }
+
+  .memory-overflow {
+    color: #555;
+    font-style: italic;
+    font-size: 10px;
+    margin: 4px 0 0;
+    text-align: center;
   }
 </style>

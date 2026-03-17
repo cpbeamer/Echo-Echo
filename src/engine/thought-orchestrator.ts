@@ -12,6 +12,7 @@ import { generateCompletion } from './ollama-client';
 import { parseDNAResponse } from './dna-parser';
 import { applyDNAUpdate } from './dna-mutation';
 import { truncateLoreCache } from './context-truncator';
+import { retrieveRelevantMemories } from './memory-store';
 
 // The prompt template is loaded as a static string at build time.
 // We inline it here to avoid dynamic file reads at runtime.
@@ -93,8 +94,11 @@ export class ThoughtOrchestrator {
         this.settings.ollamaModel,
       );
 
-      // Build the prompt from the template
-      const prompt = buildMutationPrompt(agent, contextText);
+      // Retrieve top-3 relevant memories for context enrichment
+      const memories = retrieveRelevantMemories(agent, contextText, 3);
+
+      // Build the prompt from the template, including relevant memories
+      const prompt = buildMutationPrompt(agent, contextText, memories);
 
       // Send to Ollama
       const rawResponse = await generateCompletion(this.settings.ollamaModel, prompt);
@@ -107,7 +111,7 @@ export class ThoughtOrchestrator {
         return;
       }
 
-      // Apply the mutation
+      // Apply the mutation (also persists lore as memory via applyDNAUpdate)
       applyDNAUpdate(agent, update);
     } catch (error) {
       console.error(`[BRAIN-DEV] Thought processing failed for agent ${request.agent.id}:`, error);
