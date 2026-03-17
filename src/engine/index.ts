@@ -2,7 +2,7 @@
  * Synaptic Sandbox – Shared Game Logic Engine
  */
 
-export { createAgent, createAgents, dnaToColor, resetAgentIdCounter } from './agent-factory';
+export { createAgent, createAgents, createChildAgent, dnaToColor, resetAgentIdCounter } from './agent-factory';
 export { classifyFaction, areOpposingFactions, FACTION_META } from './factions';
 export { mutateAgentFromText, applyDNAUpdate } from './dna-mutation';
 export { attemptMemeSwap, ideologicalSimilarity, processMemeSwaps } from './meme-swap';
@@ -21,3 +21,6 @@ export { findAgentsInBlastRadius, detonateDataBomb, manhattanDistance } from './
 
 // Epic 1.5 – HUD & Observation
 export { clusterAgents, extractLingoCloud, computeLingoClusters } from './lingo-cloud';
+
+// Epic 2.1 – Agent Life Cycle
+export { tickEnergy, updateAdjacencyTicks, tickReproduction, applyNaturalSelection } from './lifecycle';

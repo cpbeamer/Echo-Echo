@@ -28,6 +28,7 @@ export type {
   FactionChangeEvent,
   DataBombEvent,
   AgentDeathEvent,
+  AgentBirthEvent,
   LingoCluster,
   LingoTerm,
 } from './hud';

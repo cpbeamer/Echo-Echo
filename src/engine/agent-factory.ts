@@ -24,6 +24,11 @@ function randomInRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
+/** Clamp a value to [0, 1]. */
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
 /** Generate a random DNA vector with each axis in [0, 1]. */
 function randomVector(): DNAVector {
   return {
@@ -58,6 +63,72 @@ export function createAgent(
     radius: config.agentRadius,
     activityLevel: 0,
     deathFrame: null,
+    adjacencyTicks: new Map(),
+    parentIds: null,
+    lastReproductionTick: -Infinity,
+  };
+}
+
+/**
+ * Create a child agent from two parents with blended DNA.
+ * Child is placed at the midpoint between parents.
+ * Each DNA axis = weighted average of parents + small random jitter (±0.05).
+ */
+export function createChildAgent(
+  parentA: Agent,
+  parentB: Agent,
+  tick: number,
+  config: SimulationConfig = DEFAULT_CONFIG,
+): Agent {
+  const jitter = () => (Math.random() - 0.5) * 0.1;
+
+  const vector: DNAVector = {
+    analytical_emotional: clamp01(
+      (parentA.vector.analytical_emotional + parentB.vector.analytical_emotional) / 2 + jitter(),
+    ),
+    altruistic_selfish: clamp01(
+      (parentA.vector.altruistic_selfish + parentB.vector.altruistic_selfish) / 2 + jitter(),
+    ),
+    order_chaos: clamp01(
+      (parentA.vector.order_chaos + parentB.vector.order_chaos) / 2 + jitter(),
+    ),
+  };
+
+  const faction = classifyFaction(vector);
+  const id = `agent-${nextId++}`;
+
+  // Merge lore-caches: interleave and cap at maxLoreEntries
+  const mergedLore: string[] = [];
+  const maxLore = config.maxLoreEntries;
+  for (let i = 0; i < maxLore; i++) {
+    if (i < parentA.loreCache.length) mergedLore.push(parentA.loreCache[i]);
+    if (mergedLore.length >= maxLore) break;
+    if (i < parentB.loreCache.length) mergedLore.push(parentB.loreCache[i]);
+    if (mergedLore.length >= maxLore) break;
+  }
+
+  // Merge lingo dictionaries (parent A entries take precedence on key conflicts)
+  const mergedLingo: Record<string, string> = { ...parentB.lingo, ...parentA.lingo };
+
+  return {
+    id,
+    vector,
+    loreCache: mergedLore,
+    lingo: mergedLingo,
+    faction,
+    position: {
+      x: (parentA.position.x + parentB.position.x) / 2,
+      y: (parentA.position.y + parentB.position.y) / 2,
+    },
+    velocity: { x: 0, y: 0 },
+    energy: 0.5,
+    color: dnaToColor(vector),
+    radius: config.agentRadius,
+    activityLevel: 0,
+    deathFrame: null,
+    adjacencyTicks: new Map(),
+    parentIds: [parentA.id, parentB.id],
+    lastReproductionTick: tick,
   };
 }
 

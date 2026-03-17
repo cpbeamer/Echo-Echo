@@ -14,6 +14,12 @@ import { processMemeSwaps } from '../../engine/meme-swap';
 import { detectConflicts, resolveConflict } from '../../engine/conflict';
 import { detonateDataBomb } from '../../engine/blast-radius';
 import { ThoughtOrchestrator } from '../../engine/thought-orchestrator';
+import {
+  tickEnergy,
+  updateAdjacencyTicks,
+  tickReproduction,
+  applyNaturalSelection,
+} from '../../engine/lifecycle';
 import { brainSettings } from './brain-settings.svelte';
 import { newsfeed } from './newsfeed.svelte';
 
@@ -30,6 +36,15 @@ const SHOCKWAVE_FRAMES = 30;
 
 /** Duration of the death dissolve animation in simulation ticks. */
 const DEATH_ANIM_TICKS = 20;
+
+/** How often to capture a population snapshot (in ticks). */
+const POPULATION_SNAPSHOT_INTERVAL = 10;
+
+/** Maximum population history entries retained. */
+const MAX_POPULATION_HISTORY = 200;
+
+/** How often to run reproduction checks (in ticks). */
+const REPRODUCTION_INTERVAL = 10;
 
 let nextBombId = 0;
 
@@ -56,6 +71,13 @@ class SimulationState {
 
   /** Agent IDs currently highlighted (e.g. from history hover). */
   highlightedAgentIds: Set<string> = $state(new Set());
+
+  /** Population history ring buffer: snapshots sampled every POPULATION_SNAPSHOT_INTERVAL ticks. */
+  populationHistory: { tick: number; alive: number; births: number; deaths: number }[] = $state([]);
+
+  /** Running counters for current snapshot interval (reset every POPULATION_SNAPSHOT_INTERVAL). */
+  private birthsSinceSnapshot: number = 0;
+  private deathsSinceSnapshot: number = 0;
 
   private animFrameId: number | null = null;
   private lastTimestamp: number = 0;
@@ -103,6 +125,9 @@ class SimulationState {
     this.dataBombHistory = [];
     this.activeShockwaves = [];
     this.highlightedAgentIds = new Set();
+    this.populationHistory = [];
+    this.birthsSinceSnapshot = 0;
+    this.deathsSinceSnapshot = 0;
     newsfeed.clear();
     nextBombId = 0;
   }
@@ -233,8 +258,20 @@ class SimulationState {
     // Keep orchestrator settings in sync
     this.orchestrator.updateSettings(brainSettings.settings);
 
+    // Track agents killed by conflict this tick for accurate death-cause attribution
+    const conflictKilledIds = new Set<string>();
+
     // Physics
     tickPhysics(this.agents, 1, this.config);
+
+    // Energy depletion (every tick)
+    tickEnergy(this.agents, this.config);
+
+    // Natural selection pressure (every tick, no-op if disabled)
+    applyNaturalSelection(this.agents, this.config);
+
+    // Adjacency tracking (every tick)
+    updateAdjacencyTicks(this.agents);
 
     // Meme swaps (every 5th tick to reduce CPU)
     if (this.tick % 5 === 0) {
@@ -248,29 +285,56 @@ class SimulationState {
       }
     }
 
+    // Reproduction (every REPRODUCTION_INTERVAL ticks)
+    if (this.tick % REPRODUCTION_INTERVAL === 0 && this.tick > 0) {
+      const newborns = tickReproduction(this.agents, this.tick, this.config);
+      if (newborns.length > 0) {
+        this.agents = [...this.agents, ...newborns];
+        this.birthsSinceSnapshot += newborns.length;
+
+        for (const child of newborns) {
+          newsfeed.push({
+            type: 'agent_birth',
+            message: `🐣 Agent #${child.id.slice(-4)} born from ${child.parentIds![0].slice(-4)} × ${child.parentIds![1].slice(-4)}`,
+            parentIds: child.parentIds!,
+            childId: child.id,
+          });
+        }
+      }
+    }
+
     // Conflict detection (every 10th tick)
     if (this.tick % 10 === 0) {
       const conflicts = detectConflicts(this.aliveAgents);
       for (const conflict of conflicts) {
-        resolveConflict(conflict);
+        const consumedIds = resolveConflict(conflict);
+        // Mark conflict-killed agents so death detection can assign the correct cause
+        for (const id of consumedIds) {
+          conflictKilledIds.add(id);
+        }
         newsfeed.push({
           type: 'conflict',
           message: `⚔️ Conflict between ${conflict.dominant.length + conflict.submissive.length} agents`,
           agentIds: [...conflict.dominant.map((a) => a.id), ...conflict.submissive.map((a) => a.id)],
         });
       }
+    }
 
-      // Detect newly dead agents and start their death animation
-      for (const agent of this.agents) {
-        if (agent.energy <= 0 && agent.deathFrame === null) {
-          agent.deathFrame = 0;
-          newsfeed.push({
-            type: 'agent_death',
-            message: `💀 Agent #${agent.id.slice(-4)} perished`,
-            agentId: agent.id,
-            cause: 'conflict',
-          });
-        }
+    // Detect newly dead agents and start their death animation (runs every tick
+    // so energy-depletion deaths are caught immediately, not just every 10th tick)
+    for (const agent of this.agents) {
+      if (agent.energy <= 0 && agent.deathFrame === null) {
+        agent.deathFrame = 0;
+        this.deathsSinceSnapshot++;
+
+        const cause = conflictKilledIds.has(agent.id) ? 'conflict' : 'energy_depleted';
+        conflictKilledIds.delete(agent.id);
+        newsfeed.push({
+          type: 'agent_death',
+          message: `💀 Agent #${agent.id.slice(-4)} perished (${cause})`,
+          agentId: agent.id,
+          cause,
+        });
       }
     }
 
@@ -283,6 +347,22 @@ class SimulationState {
     this.agents = this.agents.filter(
       (a) => a.deathFrame === null || a.deathFrame < DEATH_ANIM_TICKS,
     );
+
+    // Population history snapshot
+    if (this.tick % POPULATION_SNAPSHOT_INTERVAL === 0) {
+      this.populationHistory = [
+        ...this.populationHistory,
+        {
+          tick: this.tick,
+          alive: this.aliveAgents.length,
+          births: this.birthsSinceSnapshot,
+          deaths: this.deathsSinceSnapshot,
+        },
+      ].slice(-MAX_POPULATION_HISTORY);
+
+      this.birthsSinceSnapshot = 0;
+      this.deathsSinceSnapshot = 0;
+    }
 
     // Auto-think: enqueue a random batch of agents for LLM thought
     if (brainSettings.settings.autoThink && this.tick % AUTO_THINK_INTERVAL === 0) {

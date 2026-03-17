@@ -10,7 +10,8 @@ export type SimulationEvent =
   | ConflictEvent
   | FactionChangeEvent
   | DataBombEvent
-  | AgentDeathEvent;
+  | AgentDeathEvent
+  | AgentBirthEvent;
 
 interface BaseEvent {
   /** Unique event ID. */
@@ -52,6 +53,14 @@ export interface AgentDeathEvent extends BaseEvent {
   agentId: string;
   /** Why the agent died (conflict, starvation, etc.). */
   cause: string;
+}
+
+export interface AgentBirthEvent extends BaseEvent {
+  type: 'agent_birth';
+  /** IDs of the two parent agents. */
+  parentIds: [string, string];
+  /** ID of the newly spawned child agent. */
+  childId: string;
 }
 
 /** A spatial cluster of agents with their aggregated lingo terms. */

@@ -60,6 +60,12 @@ export interface Agent extends AgentDNA {
   activityLevel: number;
   /** Frame counter for death dissolve animation, or null if alive. */
   deathFrame: number | null;
+  /** Tracks consecutive ticks each neighboring agent has been adjacent (agentId → tickCount). */
+  adjacencyTicks: Map<string, number>;
+  /** Parent agent IDs if this agent was born via reproduction, null for original agents. */
+  parentIds: [string, string] | null;
+  /** Tick number when this agent last reproduced, used for cooldown. */
+  lastReproductionTick: number;
 }
 
 /** Structured update returned by the LLM DNA mutation pipeline. */
@@ -86,6 +92,23 @@ export interface SimulationConfig {
   maxLoreEntries: number;
   /** Base radius for agents. */
   agentRadius: number;
+
+  // --- Lifecycle (Epic 2.1) ---
+
+  /** Base energy drain per tick. */
+  energyDecayRate: number;
+  /** Energy drain multiplier when an agent has no nearby neighbors. */
+  isolationDecayMultiplier: number;
+  /** Consecutive adjacency ticks required before two agents can reproduce. */
+  reproductionThreshold: number;
+  /** Minimum ideological similarity [0,1] for reproduction eligibility. */
+  reproductionSimilarity: number;
+  /** Ticks an agent must wait after reproducing before it can reproduce again. */
+  reproductionCooldown: number;
+  /** Toggle for natural selection pressure on extreme DNA vectors. */
+  naturalSelectionEnabled: boolean;
+  /** Extra energy-drain multiplier for agents with extreme (near 0 or 1) DNA values. */
+  naturalSelectionPressure: number;
 }
 
 export const DEFAULT_CONFIG: SimulationConfig = {
@@ -95,6 +118,15 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   sectorSize: 25,
   maxLoreEntries: 10,
   agentRadius: 0.4,
+
+  // Lifecycle defaults
+  energyDecayRate: 0.001,
+  isolationDecayMultiplier: 3,
+  reproductionThreshold: 50,
+  reproductionSimilarity: 0.7,
+  reproductionCooldown: 100,
+  naturalSelectionEnabled: false,
+  naturalSelectionPressure: 1.5,
 };
 
 /** Payload for dropping a data bomb onto the grid. */

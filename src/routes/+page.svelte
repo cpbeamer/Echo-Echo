@@ -7,6 +7,7 @@
   import LingoCloud from '$lib/components/LingoCloud.svelte';
   import Newsfeed from '$lib/components/Newsfeed.svelte';
   import GlobalStats from '$lib/components/GlobalStats.svelte';
+  import PopulationChart from '$lib/components/PopulationChart.svelte';
   import { simulation, type SimulationSpeed } from '$lib/stores/simulation.svelte';
   import { theme } from '$lib/stores/theme.svelte';
   import { FACTION_META } from '../engine/factions';
@@ -110,6 +111,7 @@
     <Newsfeed />
     <DataBombHistory />
     <DNAInspector />
+    <PopulationChart />
   </div>
 
   <!-- Drop Zone Modal -->
