@@ -6,12 +6,13 @@
  * and the currently selected agent.
  */
 
-import type { Agent, SimulationConfig } from '../../types';
+import type { Agent, DataBomb, DataBombRecord, SimulationConfig, Shockwave } from '../../types';
 import { DEFAULT_CONFIG } from '../../types';
 import { createAgents } from '../../engine/agent-factory';
 import { tickPhysics } from '../../engine/physics';
 import { processMemeSwaps } from '../../engine/meme-swap';
 import { detectConflicts, resolveConflict } from '../../engine/conflict';
+import { detonateDataBomb } from '../../engine/blast-radius';
 import { ThoughtOrchestrator } from '../../engine/thought-orchestrator';
 import { brainSettings } from './brain-settings';
 
@@ -22,6 +23,11 @@ const AUTO_THINK_INTERVAL = 20;
 
 /** How many agents to enqueue per auto-think cycle. */
 const AUTO_THINK_BATCH_SIZE = 5;
+
+/** Duration of the shockwave animation in render frames (~0.5s at 60fps). */
+const SHOCKWAVE_FRAMES = 30;
+
+let nextBombId = 0;
 
 class SimulationState {
   agents: Agent[] = $state([]);
@@ -34,6 +40,18 @@ class SimulationState {
   /** The brain's thought queue stats, exposed for HUD. */
   thoughtsPending: number = $state(0);
   thoughtsProcessing: number = $state(0);
+
+  /** Data bomb history log (newest first). */
+  dataBombHistory: DataBombRecord[] = $state([]);
+
+  /** Active shockwave animations rendered on the canvas. */
+  activeShockwaves: Shockwave[] = $state([]);
+
+  /** When true, the next grid click sets a bomb drop target instead of selecting an agent. */
+  isPickingTarget: boolean = $state(false);
+
+  /** Agent IDs currently highlighted (e.g. from history hover). */
+  highlightedAgentIds: Set<string> = $state(new Set());
 
   private animFrameId: number | null = null;
   private lastTimestamp: number = 0;
@@ -70,6 +88,10 @@ class SimulationState {
     this.tick = 0;
     this.selectedAgentId = null;
     this.orchestrator.clearQueue();
+    this.dataBombHistory = [];
+    this.activeShockwaves = [];
+    this.highlightedAgentIds = new Set();
+    nextBombId = 0;
   }
 
   /** Start the simulation loop. */
@@ -113,6 +135,58 @@ class SimulationState {
   /** Enqueue a specific agent for a thought request (manual trigger). */
   enqueueThought(agent: Agent, contextText: string): void {
     this.orchestrator.enqueue(agent, contextText);
+  }
+
+  /** Enable target-picking mode for the grid. */
+  startTargetPick(): void {
+    this.isPickingTarget = true;
+  }
+
+  /** Cancel target-picking mode without dropping a bomb. */
+  cancelTargetPick(): void {
+    this.isPickingTarget = false;
+  }
+
+  /**
+   * Drop a data bomb on the grid.
+   * Detonates immediately, records to history, and spawns a shockwave.
+   */
+  dropDataBomb(bomb: DataBomb): void {
+    const affectedIds = detonateDataBomb(this.agents, bomb);
+
+    const record: DataBombRecord = {
+      ...bomb,
+      id: `bomb-${nextBombId++}`,
+      timestamp: Date.now(),
+      affectedAgentIds: affectedIds,
+      contentPreview: bomb.text.slice(0, 80).replace(/\n/g, ' '),
+    };
+
+    // Newest first
+    this.dataBombHistory = [record, ...this.dataBombHistory];
+
+    // Spawn a shockwave animation
+    this.activeShockwaves = [
+      ...this.activeShockwaves,
+      {
+        center: { ...bomb.target },
+        maxRadius: bomb.radius,
+        frame: 0,
+        totalFrames: SHOCKWAVE_FRAMES,
+      },
+    ];
+
+    this.isPickingTarget = false;
+  }
+
+  /** Highlight agents from a specific data bomb record. */
+  highlightBombAgents(agentIds: string[]): void {
+    this.highlightedAgentIds = new Set(agentIds);
+  }
+
+  /** Clear any agent highlights. */
+  clearHighlights(): void {
+    this.highlightedAgentIds = new Set();
   }
 
   /** The main game loop, driven by requestAnimationFrame. */
@@ -173,9 +247,15 @@ class SimulationState {
     this.thoughtsPending = this.orchestrator.pendingCount;
     this.thoughtsProcessing = this.orchestrator.processing;
 
+    // Advance shockwave animations
+    if (this.activeShockwaves.length > 0) {
+      this.activeShockwaves = this.activeShockwaves
+        .map((sw) => ({ ...sw, frame: sw.frame + 1 }))
+        .filter((sw) => sw.frame < sw.totalFrames);
+    }
+
     this.tick++;
   }
 }
 
 export const simulation = new SimulationState();
-

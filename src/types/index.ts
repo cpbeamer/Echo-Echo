@@ -10,6 +10,9 @@ export type {
   Faction,
   Vec2,
   SimulationConfig,
+  DataBomb,
+  DataBombRecord,
+  Shockwave,
 } from './agent';
 
 export { DEFAULT_CONFIG } from './agent';

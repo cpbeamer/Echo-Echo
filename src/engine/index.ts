@@ -15,3 +15,6 @@ export { parseDNAResponse } from './dna-parser';
 export { truncateLoreCache, estimateTokens, estimateLoreCacheTokens } from './context-truncator';
 export { ThoughtOrchestrator } from './thought-orchestrator';
 export { buildMutationPrompt } from './prompt-builder';
+
+// Epic 1.4 – Data Bombs
+export { findAgentsInBlastRadius, detonateDataBomb, manhattanDistance } from './blast-radius';

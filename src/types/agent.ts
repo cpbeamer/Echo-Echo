@@ -92,3 +92,37 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   maxLoreEntries: 10,
   agentRadius: 0.4,
 };
+
+/** Payload for dropping a data bomb onto the grid. */
+export interface DataBomb {
+  /** Raw text payload that will influence affected agents. */
+  text: string;
+  /** Grid coordinate where the bomb is dropped. */
+  target: Vec2;
+  /** Blast radius in grid cells (Manhattan distance). */
+  radius: number;
+}
+
+/** Recorded history entry for a detonated data bomb. */
+export interface DataBombRecord extends DataBomb {
+  /** Unique record identifier. */
+  id: string;
+  /** Unix timestamp (ms) of when the bomb was dropped. */
+  timestamp: number;
+  /** IDs of all agents affected by the blast. */
+  affectedAgentIds: string[];
+  /** First 80 characters of the bomb text for display. */
+  contentPreview: string;
+}
+
+/** Active shockwave animation state rendered on the canvas. */
+export interface Shockwave {
+  /** Grid coordinate of the blast center. */
+  center: Vec2;
+  /** Maximum radius the ring expands to. */
+  maxRadius: number;
+  /** Current animation frame (0 → totalFrames). */
+  frame: number;
+  /** Total animation duration in render frames. */
+  totalFrames: number;
+}

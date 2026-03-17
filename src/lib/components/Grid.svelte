@@ -2,6 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { simulation } from '$lib/stores/simulation';
   import { FACTION_META } from '../../engine/factions';
+  import type { Vec2 } from '../../types';
+
+  let { ontargetpick }: { ontargetpick?: (coord: Vec2) => void } = $props();
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -81,6 +84,7 @@
     // Draw agents
     const agents = simulation.agents;
     const selectedId = simulation.selectedAgentId;
+    const highlightedIds = simulation.highlightedAgentIds;
 
     for (const agent of agents) {
       if (agent.energy <= 0) continue;
@@ -105,9 +109,63 @@
         ctx.lineWidth = 2 / camera.zoom;
         ctx.stroke();
       }
+
+      // Highlight ring (from data bomb history hover)
+      if (highlightedIds.has(agent.id)) {
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5 / camera.zoom;
+        ctx.stroke();
+
+        // Red glow for highlighted agents
+        ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
+        ctx.shadowBlur = 5 / camera.zoom;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // Draw shockwave animations
+    for (const sw of simulation.activeShockwaves) {
+      const progress = sw.frame / sw.totalFrames;
+      const currentRadius = sw.maxRadius * progress;
+      const alpha = 1 - progress;
+
+      ctx.beginPath();
+      ctx.arc(sw.center.x, sw.center.y, currentRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.8})`;
+      ctx.lineWidth = (2 + (1 - progress) * 2) / camera.zoom;
+      ctx.stroke();
+
+      // Inner fill that fades quickly
+      if (progress < 0.3) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${(0.3 - progress) * 0.15})`;
+        ctx.fill();
+      }
     }
 
     ctx.restore();
+
+    // Draw crosshair overlay when in target-pick mode (in screen space)
+    if (simulation.isPickingTarget) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([8, 6]);
+
+      // Full-width horizontal + vertical guides through center
+      ctx.beginPath();
+      ctx.moveTo(w / 2, 0);
+      ctx.lineTo(w / 2, h);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
 
     animFrameId = requestAnimationFrame(render);
   }
@@ -144,7 +202,7 @@
     }
   }
 
-  /** Handle mouse up — if no drag occurred, treat as click for selection. */
+  /** Handle mouse up — if no drag occurred, treat as click for selection or target pick. */
   function onMouseUp(e: MouseEvent) {
     if (!isDragging) return;
     isDragging = false;
@@ -156,10 +214,17 @@
     // Only treat tiny drags as clicks
     if (dx + dy > 5) return;
 
-    // Hit test: find the closest agent to the click point
     const rect = canvas.getBoundingClientRect();
     const grid = screenToGrid(e.clientX - rect.left, e.clientY - rect.top);
 
+    // Target-pick mode: emit coordinate and return
+    if (simulation.isPickingTarget) {
+      simulation.cancelTargetPick();
+      ontargetpick?.({ x: grid.x, y: grid.y });
+      return;
+    }
+
+    // Hit test: find the closest agent to the click point
     let closest: string | null = null;
     let closestDist = Infinity;
 
@@ -216,6 +281,7 @@
     onmouseup={onMouseUp}
     onmouseleave={() => (isDragging = false)}
     class:grabbing={isDragging}
+    class:picking={simulation.isPickingTarget}
   ></canvas>
 </div>
 
@@ -236,5 +302,9 @@
 
   canvas.grabbing {
     cursor: grabbing;
+  }
+
+  canvas.picking {
+    cursor: crosshair;
   }
 </style>

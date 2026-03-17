@@ -2,8 +2,11 @@
   import { onMount } from 'svelte';
   import Grid from '$lib/components/Grid.svelte';
   import DNAInspector from '$lib/components/DNAInspector.svelte';
+  import DropZone from '$lib/components/DropZone.svelte';
+  import DataBombHistory from '$lib/components/DataBombHistory.svelte';
   import { simulation, type SimulationSpeed } from '$lib/stores/simulation';
   import { FACTION_META } from '../engine/factions';
+  import type { Vec2 } from '../types';
   import '../app.css';
 
   const speeds: { label: string; value: SimulationSpeed }[] = [
@@ -12,6 +15,26 @@
     { label: '2×', value: 2 },
     { label: '5×', value: 5 },
   ];
+
+  let showDropZone = $state(false);
+  let pickedTarget: Vec2 | null = $state(null);
+
+  function openDropZone() {
+    pickedTarget = null;
+    showDropZone = true;
+  }
+
+  function closeDropZone() {
+    showDropZone = false;
+    pickedTarget = null;
+    simulation.cancelTargetPick();
+  }
+
+  function handleTargetPick(coord: Vec2) {
+    pickedTarget = coord;
+    // Re-open modal if it was hidden for picking
+    showDropZone = true;
+  }
 
   onMount(() => {
     simulation.initialize();
@@ -43,6 +66,9 @@
         {/each}
         <button class="speed-btn step-btn" onclick={() => simulation.stepForward()}>⏭</button>
       </div>
+
+      <!-- Data Bomb Button -->
+      <button class="bomb-btn" onclick={openDropZone} title="Drop Data Bomb"> 💣 </button>
     </div>
 
     <div class="topbar-right">
@@ -60,9 +86,15 @@
 
   <!-- Main Content -->
   <div class="main-content">
-    <Grid />
+    <Grid ontargetpick={handleTargetPick} />
+    <DataBombHistory />
     <DNAInspector />
   </div>
+
+  <!-- Drop Zone Modal -->
+  {#if showDropZone}
+    <DropZone onclose={closeDropZone} {pickedTarget} />
+  {/if}
 </div>
 
 <style>
@@ -155,6 +187,22 @@
     border-left: 1px solid var(--border-subtle);
   }
 
+  .bomb-btn {
+    padding: 3px 10px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  .bomb-btn:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: scale(1.05);
+  }
+
   .faction-pill {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
@@ -170,5 +218,6 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+    position: relative;
   }
 </style>
