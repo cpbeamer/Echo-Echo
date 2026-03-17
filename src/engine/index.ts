@@ -18,3 +18,6 @@ export { buildMutationPrompt } from './prompt-builder';
 
 // Epic 1.4 – Data Bombs
 export { findAgentsInBlastRadius, detonateDataBomb, manhattanDistance } from './blast-radius';
+
+// Epic 1.5 – HUD & Observation
+export { clusterAgents, extractLingoCloud, computeLingoClusters } from './lingo-cloud';

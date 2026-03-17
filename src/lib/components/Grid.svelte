@@ -4,7 +4,13 @@
   import { FACTION_META } from '../../engine/factions';
   import type { Vec2 } from '../../types';
 
-  let { ontargetpick }: { ontargetpick?: (coord: Vec2) => void } = $props();
+  let {
+    ontargetpick,
+    oncamerachange,
+  }: {
+    ontargetpick?: (coord: Vec2) => void;
+    oncamerachange?: (camera: { x: number; y: number; zoom: number }) => void;
+  } = $props();
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -169,6 +175,11 @@
 
     animFrameId = requestAnimationFrame(render);
   }
+
+  /** Notify parent of camera changes for overlay positioning. */
+  $effect(() => {
+    oncamerachange?.({ x: camera.x, y: camera.y, zoom: camera.zoom });
+  });
 
   /** Handle mouse wheel for zoom. */
   function onWheel(e: WheelEvent) {

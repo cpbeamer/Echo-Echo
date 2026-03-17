@@ -71,4 +71,6 @@ body {
   --text-secondary: #444458;
   --text-muted: #888898;
   --border-subtle: rgba(0, 0, 0, 0.08);
+  --accent: #4f46e5;
+  --accent-glow: rgba(79, 70, 229, 0.2);
 }

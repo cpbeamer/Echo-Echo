@@ -15,6 +15,7 @@ import { detectConflicts, resolveConflict } from '../../engine/conflict';
 import { detonateDataBomb } from '../../engine/blast-radius';
 import { ThoughtOrchestrator } from '../../engine/thought-orchestrator';
 import { brainSettings } from './brain-settings';
+import { newsfeed } from './newsfeed';
 
 export type SimulationSpeed = 0 | 1 | 2 | 5;
 
@@ -81,6 +82,14 @@ class SimulationState {
     return counts;
   }
 
+  /** Average peace score across alive agents: mean of (1 - order_chaos). */
+  get averagePeaceScore(): number {
+    const alive = this.aliveAgents;
+    if (alive.length === 0) return 0;
+    const sum = alive.reduce((acc, a) => acc + (1 - a.vector.order_chaos), 0);
+    return sum / alive.length;
+  }
+
   /** Initialize the simulation with a fresh set of agents. */
   initialize(config: SimulationConfig = this.config): void {
     this.config = { ...config };
@@ -91,6 +100,7 @@ class SimulationState {
     this.dataBombHistory = [];
     this.activeShockwaves = [];
     this.highlightedAgentIds = new Set();
+    newsfeed.clear();
     nextBombId = 0;
   }
 
@@ -177,6 +187,14 @@ class SimulationState {
     ];
 
     this.isPickingTarget = false;
+
+    // Newsfeed event
+    newsfeed.push({
+      type: 'data_bomb',
+      message: `💣 Data bomb hit ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)})`,
+      affectedCount: affectedIds.length,
+      target: { ...bomb.target },
+    });
   }
 
   /** Highlight agents from a specific data bomb record. */
@@ -217,7 +235,14 @@ class SimulationState {
 
     // Meme swaps (every 5th tick to reduce CPU)
     if (this.tick % 5 === 0) {
-      processMemeSwaps(this.aliveAgents);
+      const swapCount = processMemeSwaps(this.aliveAgents);
+      if (swapCount > 0) {
+        newsfeed.push({
+          type: 'meme_swap',
+          message: `🔄 ${swapCount} meme swap${swapCount > 1 ? 's' : ''} this tick`,
+          swapCount,
+        });
+      }
     }
 
     // Conflict detection (every 10th tick)
@@ -225,8 +250,23 @@ class SimulationState {
       const conflicts = detectConflicts(this.aliveAgents);
       for (const conflict of conflicts) {
         resolveConflict(conflict);
+        newsfeed.push({
+          type: 'conflict',
+          message: `⚔️ Conflict between ${conflict.dominant.length + conflict.submissive.length} agents`,
+          agentIds: [...conflict.dominant.map((a) => a.id), ...conflict.submissive.map((a) => a.id)],
+        });
       }
-      // Remove dead agents
+
+      // Detect and log agent deaths, then remove dead agents
+      const deadAgents = this.agents.filter((a) => a.energy <= 0);
+      for (const dead of deadAgents) {
+        newsfeed.push({
+          type: 'agent_death',
+          message: `💀 Agent #${dead.id.slice(-4)} perished`,
+          agentId: dead.id,
+          cause: 'conflict',
+        });
+      }
       this.agents = this.agents.filter((a) => a.energy > 0);
     }
 
