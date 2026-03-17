@@ -56,6 +56,8 @@ export function createAgent(
     energy: 1.0,
     color: dnaToColor(vector),
     radius: config.agentRadius,
+    activityLevel: 0,
+    deathFrame: null,
   };
 }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { simulation } from '$lib/stores/simulation';
+  import { simulation } from '$lib/stores/simulation.svelte';
   import type { Vec2 } from '../../types';
 
   let { onclose, pickedTarget }: { onclose: () => void; pickedTarget: Vec2 | null } = $props();

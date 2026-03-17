@@ -14,8 +14,8 @@ import { processMemeSwaps } from '../../engine/meme-swap';
 import { detectConflicts, resolveConflict } from '../../engine/conflict';
 import { detonateDataBomb } from '../../engine/blast-radius';
 import { ThoughtOrchestrator } from '../../engine/thought-orchestrator';
-import { brainSettings } from './brain-settings';
-import { newsfeed } from './newsfeed';
+import { brainSettings } from './brain-settings.svelte';
+import { newsfeed } from './newsfeed.svelte';
 
 export type SimulationSpeed = 0 | 1 | 2 | 5;
 
@@ -27,6 +27,9 @@ const AUTO_THINK_BATCH_SIZE = 5;
 
 /** Duration of the shockwave animation in render frames (~0.5s at 60fps). */
 const SHOCKWAVE_FRAMES = 30;
+
+/** Duration of the death dissolve animation in simulation ticks. */
+const DEATH_ANIM_TICKS = 20;
 
 let nextBombId = 0;
 
@@ -71,7 +74,7 @@ class SimulationState {
   }
 
   get aliveAgents(): Agent[] {
-    return this.agents.filter((a) => a.energy > 0);
+    return this.agents.filter((a) => a.energy > 0 && a.deathFrame === null);
   }
 
   get factionCounts(): Record<string, number> {
@@ -257,18 +260,29 @@ class SimulationState {
         });
       }
 
-      // Detect and log agent deaths, then remove dead agents
-      const deadAgents = this.agents.filter((a) => a.energy <= 0);
-      for (const dead of deadAgents) {
-        newsfeed.push({
-          type: 'agent_death',
-          message: `💀 Agent #${dead.id.slice(-4)} perished`,
-          agentId: dead.id,
-          cause: 'conflict',
-        });
+      // Detect newly dead agents and start their death animation
+      for (const agent of this.agents) {
+        if (agent.energy <= 0 && agent.deathFrame === null) {
+          agent.deathFrame = 0;
+          newsfeed.push({
+            type: 'agent_death',
+            message: `💀 Agent #${agent.id.slice(-4)} perished`,
+            agentId: agent.id,
+            cause: 'conflict',
+          });
+        }
       }
-      this.agents = this.agents.filter((a) => a.energy > 0);
     }
+
+    // Advance death animations and remove fully dissolved agents
+    for (const agent of this.agents) {
+      if (agent.deathFrame !== null) {
+        agent.deathFrame++;
+      }
+    }
+    this.agents = this.agents.filter(
+      (a) => a.deathFrame === null || a.deathFrame < DEATH_ANIM_TICKS,
+    );
 
     // Auto-think: enqueue a random batch of agents for LLM thought
     if (brainSettings.settings.autoThink && this.tick % AUTO_THINK_INTERVAL === 0) {
@@ -276,7 +290,15 @@ class SimulationState {
       const batchSize = Math.min(AUTO_THINK_BATCH_SIZE, alive.length);
       const shuffled = [...alive].sort(() => Math.random() - 0.5);
       for (let i = 0; i < batchSize; i++) {
+        shuffled[i].activityLevel = 1.0;
         this.orchestrator.enqueue(shuffled[i], '');
+      }
+    }
+
+    // Decay activity levels back to idle over time
+    for (const agent of this.agents) {
+      if (agent.activityLevel > 0) {
+        agent.activityLevel = Math.max(0, agent.activityLevel - 0.02);
       }
     }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { simulation } from '$lib/stores/simulation';
-  import { FACTION_META } from '../../engine/factions';
+  import { simulation } from '$lib/stores/simulation.svelte';
+  import { PixiRenderer } from '../../engine/pixi-renderer';
   import type { Vec2 } from '../../types';
 
   let {
@@ -12,9 +12,8 @@
     oncamerachange?: (camera: { x: number; y: number; zoom: number }) => void;
   } = $props();
 
-  let canvas: HTMLCanvasElement;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let animFrameId: number;
+  let container: HTMLDivElement;
+  let renderer: PixiRenderer | null = null;
 
   // Camera state for pan/zoom
   let camera = $state({
@@ -25,160 +24,45 @@
 
   let isDragging = $state(false);
   let dragStart = { x: 0, y: 0 };
-  let canvasWidth = $state(0);
-  let canvasHeight = $state(0);
-
-  /** Convert screen coords to grid coords. */
-  function screenToGrid(sx: number, sy: number) {
-    return {
-      x: (sx - camera.x) / camera.zoom,
-      y: (sy - camera.y) / camera.zoom,
-    };
-  }
-
-  /** Render a single frame. */
-  function render() {
-    if (!ctx) return;
-
-    const w = canvasWidth;
-    const h = canvasHeight;
-
-    ctx.clearRect(0, 0, w, h);
-    ctx.save();
-    ctx.translate(camera.x, camera.y);
-    ctx.scale(camera.zoom, camera.zoom);
-
-    const config = simulation.config;
-
-    // Draw grid background
-    ctx.fillStyle = '#0a0a0f';
-    ctx.fillRect(0, 0, config.gridWidth, config.gridHeight);
-
-    // Draw sector boundaries
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-    ctx.lineWidth = 1 / camera.zoom;
-    for (let x = 0; x <= config.gridWidth; x += config.sectorSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, config.gridHeight);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= config.gridHeight; y += config.sectorSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(config.gridWidth, y);
-      ctx.stroke();
-    }
-
-    // Draw fine grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
-    if (camera.zoom > 5) {
-      for (let x = 0; x <= config.gridWidth; x += 1) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, config.gridHeight);
-        ctx.stroke();
-      }
-      for (let y = 0; y <= config.gridHeight; y += 1) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(config.gridWidth, y);
-        ctx.stroke();
-      }
-    }
-
-    // Draw agents
-    const agents = simulation.agents;
-    const selectedId = simulation.selectedAgentId;
-    const highlightedIds = simulation.highlightedAgentIds;
-
-    for (const agent of agents) {
-      if (agent.energy <= 0) continue;
-
-      ctx.beginPath();
-      ctx.arc(agent.position.x, agent.position.y, agent.radius, 0, Math.PI * 2);
-
-      // Fill with DNA-derived color
-      ctx.fillStyle = agent.color;
-      ctx.fill();
-
-      // Subtle faction glow
-      const factionMeta = FACTION_META[agent.faction];
-      ctx.shadowColor = factionMeta.glowColor;
-      ctx.shadowBlur = 3 / camera.zoom;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Selection ring
-      if (agent.id === selectedId) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2 / camera.zoom;
-        ctx.stroke();
-      }
-
-      // Highlight ring (from data bomb history hover)
-      if (highlightedIds.has(agent.id)) {
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 1.5 / camera.zoom;
-        ctx.stroke();
-
-        // Red glow for highlighted agents
-        ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
-        ctx.shadowBlur = 5 / camera.zoom;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-    }
-
-    // Draw shockwave animations
-    for (const sw of simulation.activeShockwaves) {
-      const progress = sw.frame / sw.totalFrames;
-      const currentRadius = sw.maxRadius * progress;
-      const alpha = 1 - progress;
-
-      ctx.beginPath();
-      ctx.arc(sw.center.x, sw.center.y, currentRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.8})`;
-      ctx.lineWidth = (2 + (1 - progress) * 2) / camera.zoom;
-      ctx.stroke();
-
-      // Inner fill that fades quickly
-      if (progress < 0.3) {
-        ctx.fillStyle = `rgba(239, 68, 68, ${(0.3 - progress) * 0.15})`;
-        ctx.fill();
-      }
-    }
-
-    ctx.restore();
-
-    // Draw crosshair overlay when in target-pick mode (in screen space)
-    if (simulation.isPickingTarget) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([8, 6]);
-
-      // Full-width horizontal + vertical guides through center
-      ctx.beginPath();
-      ctx.moveTo(w / 2, 0);
-      ctx.lineTo(w / 2, h);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(0, h / 2);
-      ctx.lineTo(w, h / 2);
-      ctx.stroke();
-
-      ctx.setLineDash([]);
-      ctx.restore();
-    }
-
-    animFrameId = requestAnimationFrame(render);
-  }
 
   /** Notify parent of camera changes for overlay positioning. */
   $effect(() => {
     oncamerachange?.({ x: camera.x, y: camera.y, zoom: camera.zoom });
+  });
+
+  /** Sync camera transform to the PixiJS renderer. */
+  $effect(() => {
+    renderer?.setCamera(camera.x, camera.y, camera.zoom);
+  });
+
+  /** Sync agents to the renderer. */
+  $effect(() => {
+    const agents = simulation.agents;
+    renderer?.syncAgents(agents);
+  });
+
+  /** Sync selected agent to the renderer. */
+  $effect(() => {
+    const selectedId = simulation.selectedAgentId;
+    renderer?.setSelectedAgent(selectedId);
+  });
+
+  /** Sync highlighted agents to the renderer. */
+  $effect(() => {
+    const ids = simulation.highlightedAgentIds;
+    renderer?.setHighlightedAgents(ids);
+  });
+
+  /** Sync shockwaves from the store. */
+  $effect(() => {
+    const shockwaves = simulation.activeShockwaves;
+    renderer?.syncShockwaves(shockwaves);
+  });
+
+  /** Sync target-pick mode. */
+  $effect(() => {
+    const picking = simulation.isPickingTarget;
+    renderer?.setTargetPickMode(picking);
   });
 
   /** Handle mouse wheel for zoom. */
@@ -188,7 +72,7 @@
     const newZoom = Math.max(1, Math.min(50, camera.zoom * zoomFactor));
 
     // Zoom toward cursor position
-    const rect = canvas.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
@@ -197,7 +81,7 @@
     camera.zoom = newZoom;
   }
 
-  /** Handle mouse down for pan start or agent selection. */
+  /** Handle mouse down for pan start. */
   function onMouseDown(e: MouseEvent) {
     if (e.button === 0) {
       isDragging = true;
@@ -225,8 +109,10 @@
     // Only treat tiny drags as clicks
     if (dx + dy > 5) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const grid = screenToGrid(e.clientX - rect.left, e.clientY - rect.top);
+    const rect = container.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const grid = renderer?.screenToGrid(screenX, screenY) ?? { x: 0, y: 0 };
 
     // Target-pick mode: emit coordinate and return
     if (simulation.isPickingTarget) {
@@ -235,65 +121,45 @@
       return;
     }
 
-    // Hit test: find the closest agent to the click point
-    let closest: string | null = null;
-    let closestDist = Infinity;
-
-    for (const agent of simulation.agents) {
-      if (agent.energy <= 0) continue;
-      const adx = agent.position.x - grid.x;
-      const ady = agent.position.y - grid.y;
-      const dist = Math.sqrt(adx * adx + ady * ady);
-
-      if (dist < agent.radius * 2 && dist < closestDist) {
-        closest = agent.id;
-        closestDist = dist;
-      }
-    }
-
+    // Hit test using the renderer
+    const closest = renderer?.hitTest(grid.x, grid.y, simulation.agents) ?? null;
     simulation.selectAgent(closest);
   }
 
-  /** Resize canvas to fill its container. */
-  function resizeCanvas() {
-    if (!canvas) return;
-    const rect = canvas.parentElement?.getBoundingClientRect();
-    if (!rect) return;
-    canvasWidth = rect.width;
-    canvasHeight = rect.height;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-  }
+  onMount(async () => {
+    renderer = new PixiRenderer();
+    const config = simulation.config;
 
-  onMount(() => {
-    ctx = canvas.getContext('2d');
-    resizeCanvas();
+    await renderer.init(container, config.gridWidth, config.gridHeight, config.sectorSize);
 
     // Center the grid in view
-    camera.x = canvasWidth / 2 - (simulation.config.gridWidth * camera.zoom) / 2;
-    camera.y = canvasHeight / 2 - (simulation.config.gridHeight * camera.zoom) / 2;
+    const rect = container.getBoundingClientRect();
+    camera.x = rect.width / 2 - (config.gridWidth * camera.zoom) / 2;
+    camera.y = rect.height / 2 - (config.gridHeight * camera.zoom) / 2;
 
-    animFrameId = requestAnimationFrame(render);
-    window.addEventListener('resize', resizeCanvas);
+    renderer.setCamera(camera.x, camera.y, camera.zoom);
   });
 
   onDestroy(() => {
-    cancelAnimationFrame(animFrameId);
-    window.removeEventListener('resize', resizeCanvas);
+    renderer?.destroy();
+    renderer = null;
   });
 </script>
 
-<div class="grid-container">
-  <canvas
-    bind:this={canvas}
-    onwheel={onWheel}
-    onmousedown={onMouseDown}
-    onmousemove={onMouseMove}
-    onmouseup={onMouseUp}
-    onmouseleave={() => (isDragging = false)}
-    class:grabbing={isDragging}
-    class:picking={simulation.isPickingTarget}
-  ></canvas>
+<div
+  class="grid-container"
+  bind:this={container}
+  onwheel={onWheel}
+  onmousedown={onMouseDown}
+  onmousemove={onMouseMove}
+  onmouseup={onMouseUp}
+  onmouseleave={() => (isDragging = false)}
+  class:grabbing={isDragging}
+  class:picking={simulation.isPickingTarget}
+  role="application"
+  aria-label="Simulation grid"
+  tabindex="0"
+>
 </div>
 
 <style>
@@ -302,20 +168,20 @@
     position: relative;
     overflow: hidden;
     background: #050508;
-  }
-
-  canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
     cursor: grab;
   }
 
-  canvas.grabbing {
+  .grid-container.grabbing {
     cursor: grabbing;
   }
 
-  canvas.picking {
+  .grid-container.picking {
     cursor: crosshair;
+  }
+
+  .grid-container :global(canvas) {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
   }
 </style>

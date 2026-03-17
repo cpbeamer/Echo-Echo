@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { brainSettings } from '../stores/brain-settings';
+  import { brainSettings } from '../stores/brain-settings.svelte';
   import { onMount } from 'svelte';
 
   let isRefreshing = $state(false);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { simulation } from '$lib/stores/simulation';
+  import { simulation } from '$lib/stores/simulation.svelte';
   import { computeLingoClusters } from '../../engine/lingo-cloud';
   import type { LingoCluster } from '../../types/hud';
 

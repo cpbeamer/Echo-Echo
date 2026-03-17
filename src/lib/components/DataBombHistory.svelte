@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { simulation } from '$lib/stores/simulation';
+  import { simulation } from '$lib/stores/simulation.svelte';
 
   let expandedId: string | null = $state(null);
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { newsfeed } from '$lib/stores/newsfeed';
+  import { newsfeed } from '$lib/stores/newsfeed.svelte';
 
   /** Maximum events to render in the visible list. */
   const VISIBLE_LIMIT = 50;

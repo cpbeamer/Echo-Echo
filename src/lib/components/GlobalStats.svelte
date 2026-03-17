@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { simulation } from '$lib/stores/simulation';
+  import { simulation } from '$lib/stores/simulation.svelte';
   import { FACTION_META } from '../../engine/factions';
   import type { Faction } from '../../types';
 

@@ -56,6 +56,10 @@ export interface Agent extends AgentDNA {
   color: string;
   /** Radius for rendering and collision (in grid cells). */
   radius: number;
+  /** Activity level [0, 1]: 0 = idle, 1 = mid-thought. Drives wobble shader intensity. */
+  activityLevel: number;
+  /** Frame counter for death dissolve animation, or null if alive. */
+  deathFrame: number | null;
 }
 
 /** Structured update returned by the LLM DNA mutation pipeline. */
