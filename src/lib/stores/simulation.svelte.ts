@@ -191,11 +191,26 @@ class SimulationState {
    */
   dropDataBomb(bomb: DataBomb): void {
     const bombType = bomb.type ?? 'standard';
+    const isManifesto = bombType === 'manifesto';
 
-    const affectedIds =
-      bombType === 'amnesia'
-        ? detonateAmnesiaBomb(this.agents, bomb)
-        : detonateDataBomb(this.agents, bomb);
+    // Manifesto bombs use amplified radius and mutation delta
+    const effectiveRadius = isManifesto
+      ? bomb.radius * this.config.manifestoRadiusMultiplier
+      : bomb.radius;
+
+    const effectiveDelta = isManifesto
+      ? 0.05 * this.config.manifestoDeltaMultiplier
+      : undefined;
+
+    const effectiveBomb: DataBomb = { ...bomb, radius: effectiveRadius };
+
+    let affectedIds: string[];
+    if (bombType === 'amnesia') {
+      affectedIds = detonateAmnesiaBomb(this.agents, effectiveBomb);
+    } else {
+      // standard, pdf, url, and manifesto all use text-based mutation
+      affectedIds = detonateDataBomb(this.agents, effectiveBomb, effectiveDelta);
+    }
 
     const record: DataBombRecord = {
       ...bomb,
@@ -211,14 +226,15 @@ class SimulationState {
     // Newest first
     this.dataBombHistory = [record, ...this.dataBombHistory];
 
-    // Spawn a shockwave animation
+    // Spawn a shockwave animation (manifesto = red, others = default)
     this.activeShockwaves = [
       ...this.activeShockwaves,
       {
         center: { ...bomb.target },
-        maxRadius: bomb.radius,
+        maxRadius: effectiveRadius,
         frame: 0,
         totalFrames: SHOCKWAVE_FRAMES,
+        ...(isManifesto ? { color: 0xff2222 } : {}),
       },
     ];
 
@@ -232,10 +248,18 @@ class SimulationState {
         affectedCount: affectedIds.length,
         target: { ...bomb.target },
       });
+    } else if (isManifesto) {
+      newsfeed.push({
+        type: 'manifesto_bomb',
+        message: `📜 Manifesto bomb hit ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)}) with 2× force`,
+        affectedCount: affectedIds.length,
+        target: { ...bomb.target },
+      });
     } else {
+      const emoji = bombType === 'pdf' ? '📄' : bombType === 'url' ? '🔗' : '💣';
       newsfeed.push({
         type: 'data_bomb',
-        message: `💣 Data bomb hit ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)})`,
+        message: `${emoji} Data bomb hit ${affectedIds.length} agents at (${Math.round(bomb.target.x)}, ${Math.round(bomb.target.y)})`,
         affectedCount: affectedIds.length,
         target: { ...bomb.target },
       });

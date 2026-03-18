@@ -28,13 +28,14 @@ export function findAgentsInBlastRadius(agents: Agent[], center: Vec2, radius: n
 /**
  * Detonate a data bomb: mutate DNA of every agent in the blast radius.
  *
+ * @param delta - Optional mutation strength override (default 0.05). Manifesto bombs pass 2×.
  * Returns the IDs of all affected agents so the caller can record them.
  */
-export function detonateDataBomb(agents: Agent[], bomb: DataBomb): string[] {
+export function detonateDataBomb(agents: Agent[], bomb: DataBomb, delta?: number): string[] {
   const affected = findAgentsInBlastRadius(agents, bomb.target, bomb.radius);
 
   for (const agent of affected) {
-    mutateAgentFromText(agent, bomb.text);
+    mutateAgentFromText(agent, bomb.text, delta);
   }
 
   return affected.map((a) => a.id);

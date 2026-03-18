@@ -42,6 +42,8 @@ interface ShockwaveNode {
   maxRadius: number;
   frame: number;
   totalFrames: number;
+  /** Hex color for the shockwave ring/fill. */
+  color: number;
 }
 
 export class PixiRenderer {
@@ -172,11 +174,16 @@ export class PixiRenderer {
   }
 
   /** Spawn a shockwave animation at the given grid coordinates. Returns a unique ID. */
-  addShockwave(center: { x: number; y: number }, maxRadius: number, totalFrames: number): number {
+  addShockwave(
+    center: { x: number; y: number },
+    maxRadius: number,
+    totalFrames: number,
+    color: number = 0xef4444,
+  ): number {
     const id = nextShockwaveId++;
     const graphic = new Graphics();
     this.viewport.addChild(graphic);
-    this.shockwaves.push({ id, graphic, center, maxRadius, frame: 0, totalFrames });
+    this.shockwaves.push({ id, graphic, center, maxRadius, frame: 0, totalFrames, color });
     return id;
   }
 
@@ -191,7 +198,7 @@ export class PixiRenderer {
     for (let i = this.trackedStoreShockwaveCount; i < storeShockwaves.length; i++) {
       const sw = storeShockwaves[i];
       if (sw.frame <= 1) {
-        this.addShockwave(sw.center, sw.maxRadius, sw.totalFrames);
+        this.addShockwave(sw.center, sw.maxRadius, sw.totalFrames, sw.color);
       }
     }
     this.trackedStoreShockwaveCount = storeShockwaves.length;
@@ -419,13 +426,13 @@ export class PixiRenderer {
       sw.graphic.clear();
       sw.graphic
         .circle(sw.center.x, sw.center.y, currentRadius)
-        .stroke({ color: 0xef4444, alpha, width: lineWidth });
+        .stroke({ color: sw.color, alpha, width: lineWidth });
 
       // Inner fill that fades quickly
       if (progress < 0.3) {
         sw.graphic
           .circle(sw.center.x, sw.center.y, currentRadius)
-          .fill({ color: 0xef4444, alpha: (0.3 - progress) * 0.15 });
+          .fill({ color: sw.color, alpha: (0.3 - progress) * 0.15 });
       }
     }
   }

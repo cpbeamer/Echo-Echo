@@ -12,7 +12,8 @@ export type SimulationEvent =
   | DataBombEvent
   | AgentDeathEvent
   | AgentBirthEvent
-  | AmnesiaBombEvent;
+  | AmnesiaBombEvent
+  | ManifestoBombEvent;
 
 interface BaseEvent {
   /** Unique event ID. */
@@ -67,6 +68,13 @@ export interface AgentBirthEvent extends BaseEvent {
 export interface AmnesiaBombEvent extends BaseEvent {
   type: 'amnesia_bomb';
   /** Number of agents whose memory was wiped. */
+  affectedCount: number;
+  target: Vec2;
+}
+
+export interface ManifestoBombEvent extends BaseEvent {
+  type: 'manifesto_bomb';
+  /** Number of agents hit with amplified mutation. */
   affectedCount: number;
   target: Vec2;
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { simulation } from '$lib/stores/simulation.svelte';
+  import type { DataBombType } from '../../types';
 
   let expandedId: string | null = $state(null);
 
@@ -13,6 +14,22 @@
       minute: '2-digit',
       second: '2-digit',
     });
+  }
+
+  /** Map bomb type to its display emoji. */
+  function typeBadge(type: DataBombType): string {
+    switch (type) {
+      case 'amnesia':
+        return '🧹';
+      case 'pdf':
+        return '📄';
+      case 'url':
+        return '🔗';
+      case 'manifesto':
+        return '📜';
+      default:
+        return '💣';
+    }
   }
 
   function handleMouseEnter(agentIds: string[]) {
@@ -41,9 +58,10 @@
             onmouseenter={() => handleMouseEnter(record.affectedAgentIds)}
             onmouseleave={handleMouseLeave}
           >
+            <span class="item-badge">{typeBadge(record.type)}</span>
             <span class="item-time">{formatTime(record.timestamp)}</span>
             <span class="item-meta">
-              <span class="affected-count">{record.affectedAgentIds.length}</span> hit
+              <span class="affected-count" class:manifesto={record.type === 'manifesto'}>{record.affectedAgentIds.length}</span> hit
             </span>
             <span class="expand-arrow">{expandedId === record.id ? '▾' : '▸'}</span>
           </button>
@@ -60,6 +78,10 @@
               <div class="detail-row">
                 <span class="detail-label">Radius</span>
                 <span class="detail-value">{record.radius} cells</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Type</span>
+                <span class="detail-value">{record.type}</span>
               </div>
             </div>
           {/if}
@@ -163,6 +185,16 @@
   .affected-count {
     font-weight: 600;
     color: #ef4444;
+  }
+
+  .affected-count.manifesto {
+    color: #dc2626;
+    text-shadow: 0 0 6px rgba(220, 38, 38, 0.4);
+  }
+
+  .item-badge {
+    font-size: 12px;
+    flex-shrink: 0;
   }
 
   .expand-arrow {

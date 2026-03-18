@@ -126,6 +126,13 @@ export interface SimulationConfig {
 
   /** Maximum long-term memory entries retained per agent. */
   maxMemoryEntries: number;
+
+  // --- Advanced Data Bombs (Epic 2.3) ---
+
+  /** Blast radius multiplier for manifesto bombs (default 2×). */
+  manifestoRadiusMultiplier: number;
+  /** Mutation delta multiplier for manifesto bombs (default 2×). */
+  manifestoDeltaMultiplier: number;
 }
 
 export const DEFAULT_CONFIG: SimulationConfig = {
@@ -147,10 +154,14 @@ export const DEFAULT_CONFIG: SimulationConfig = {
 
   // Persistent Memory defaults
   maxMemoryEntries: 50,
+
+  // Advanced Data Bombs defaults
+  manifestoRadiusMultiplier: 2,
+  manifestoDeltaMultiplier: 2,
 };
 
-/** The kind of data bomb: standard mutates DNA, amnesia wipes memory. */
-export type DataBombType = 'standard' | 'amnesia';
+/** The kind of data bomb. */
+export type DataBombType = 'standard' | 'amnesia' | 'pdf' | 'url' | 'manifesto';
 
 /** Payload for dropping a data bomb onto the grid. */
 export interface DataBomb {
@@ -186,4 +197,6 @@ export interface Shockwave {
   frame: number;
   /** Total animation duration in render frames. */
   totalFrames: number;
+  /** Optional hex color override (default: 0xef4444). Manifesto bombs use 0xff2222. */
+  color?: number;
 }

@@ -32,6 +32,7 @@ export type {
   AgentDeathEvent,
   AgentBirthEvent,
   AmnesiaBombEvent,
+  ManifestoBombEvent,
   LingoCluster,
   LingoTerm,
 } from './hud';
