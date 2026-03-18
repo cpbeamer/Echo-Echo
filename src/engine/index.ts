@@ -27,3 +27,18 @@ export { tickEnergy, updateAdjacencyTicks, tickReproduction, applyNaturalSelecti
 
 // Epic 2.2 – Persistent Memory
 export { addMemory, retrieveRelevantMemories, clearMemory, extractKeywords } from './memory-store';
+
+// Epic 3.0 – P2P Networking
+export { serializeAgent, deserializeAgent, computeStateDiff, applyStateDiff } from './state-sync';
+export {
+  startNetwork,
+  stopNetwork,
+  getPeerId,
+  getConnectedPeers,
+  hostSector,
+  broadcastState,
+  subscribeToNetworkEvents,
+} from './network-manager';
+export { SectorHost, serializeFullState } from './sector-host';
+export { SectorVisitor } from './sector-visitor';
+

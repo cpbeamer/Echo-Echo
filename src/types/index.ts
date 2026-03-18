@@ -36,3 +36,23 @@ export type {
   LingoCluster,
   LingoTerm,
 } from './hud';
+
+export type {
+  PeerId,
+  PeerRole,
+  NetworkStatus,
+  PeerInfo,
+  SectorAssignment,
+  SerializedAgent,
+  StateDiff,
+  AgentPatch,
+  NetworkConfig,
+  RemoteDataBomb,
+  NetworkEvent,
+  PeerJoinedEvent,
+  PeerLeftEvent,
+  SectorHostedEvent,
+  BombReceivedEvent,
+} from './networking';
+
+export { DEFAULT_NETWORK_CONFIG } from './networking';
