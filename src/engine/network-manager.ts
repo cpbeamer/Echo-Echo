@@ -40,6 +40,40 @@ export async function hostSector(sectorId: string): Promise<void> {
   return invoke<void>('host_sector', { sectorId });
 }
 
+// ── Sector Expansion (Epic 3.1) ─────────────────────────────────────────────
+
+/** Register a new sector in the global map. */
+export async function spawnSectorCmd(
+  sectorId: string,
+  hostPeerId: string,
+  originX: number,
+  originY: number,
+  width: number,
+  height: number,
+): Promise<void> {
+  return invoke<void>('spawn_sector', { sectorId, hostPeerId, originX, originY, width, height });
+}
+
+/** Remove a sector from the global map. */
+export async function removeSectorCmd(sectorId: string): Promise<void> {
+  return invoke<void>('remove_sector', { sectorId });
+}
+
+/** Raw sector entry as returned by the Rust backend (snake_case field names). */
+export interface RawSectorEntry {
+  sector_id: string;
+  host_peer_id: string;
+  origin_x: number;
+  origin_y: number;
+  width: number;
+  height: number;
+}
+
+/** Retrieve all registered sectors from the backend. */
+export async function getSectors(): Promise<RawSectorEntry[]> {
+  return invoke('get_sectors');
+}
+
 // ── State Broadcasting ──────────────────────────────────────────────────────
 
 /** Broadcast a serialized state diff to all connected visitors. */
@@ -56,6 +90,8 @@ export interface NetworkEventCallbacks {
   onPeerLeft?: (payload: { peerId: string }) => void;
   onSectorHosted?: (payload: { peerId: string; sectorId: string }) => void;
   onStateUpdate?: (payload: { diff: string }) => void;
+  onSectorSpawned?: (payload: { sectorId: string; hostPeerId: string }) => void;
+  onSectorRemoved?: (payload: { sectorId: string }) => void;
 }
 
 /**
@@ -112,9 +148,28 @@ export async function subscribeToNetworkEvents(
     );
   }
 
+  if (callbacks.onSectorSpawned) {
+    const cb = callbacks.onSectorSpawned;
+    unlisteners.push(
+      await listen('network://sector-spawned', (event) => {
+        cb(event.payload as { sectorId: string; hostPeerId: string });
+      }),
+    );
+  }
+
+  if (callbacks.onSectorRemoved) {
+    const cb = callbacks.onSectorRemoved;
+    unlisteners.push(
+      await listen('network://sector-removed', (event) => {
+        cb(event.payload as { sectorId: string });
+      }),
+    );
+  }
+
   return () => {
     for (const unlisten of unlisteners) {
       unlisten();
     }
   };
 }
+

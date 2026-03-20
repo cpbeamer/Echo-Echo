@@ -19,6 +19,17 @@ pub struct PeerInfo {
     pub latency_ms: f64,
 }
 
+/// A registered sector in the global map.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SectorEntry {
+    pub sector_id: String,
+    pub host_peer_id: String,
+    pub origin_x: f64,
+    pub origin_y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
 /// Shared network state managed by Tauri.
 pub struct NetworkState {
     /// Our own peer ID (set when the network starts).
@@ -31,6 +42,8 @@ pub struct NetworkState {
     hosted_sector: Option<String>,
     /// Our current role.
     role: String,
+    /// All registered sectors in the global map (Epic 3.1).
+    sectors: HashMap<String, SectorEntry>,
 }
 
 impl Default for NetworkState {
@@ -41,6 +54,7 @@ impl Default for NetworkState {
             is_active: false,
             hosted_sector: None,
             role: "disconnected".to_string(),
+            sectors: HashMap::new(),
         }
     }
 }
@@ -111,6 +125,7 @@ pub async fn stop_network(
     net.connected_peers.clear();
     net.hosted_sector = None;
     net.role = "disconnected".to_string();
+    net.sectors.clear();
 
     let _ = app.emit("network://status", serde_json::json!({
         "status": "offline",
@@ -189,4 +204,72 @@ pub async fn broadcast_state(
     }));
 
     Ok(())
+}
+
+// ── Sector Expansion (Epic 3.1) ────────────────────────────────────────────
+
+/// Register a new sector in the global map.
+#[tauri::command]
+pub async fn spawn_sector(
+    state: tauri::State<'_, SharedNetworkState>,
+    app: AppHandle,
+    sector_id: String,
+    host_peer_id: String,
+    origin_x: f64,
+    origin_y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let mut net = state.lock().await;
+
+    if !net.is_active {
+        return Err("Network is not active".to_string());
+    }
+
+    let entry = SectorEntry {
+        sector_id: sector_id.clone(),
+        host_peer_id: host_peer_id.clone(),
+        origin_x,
+        origin_y,
+        width,
+        height,
+    };
+
+    net.sectors.insert(sector_id.clone(), entry);
+
+    let _ = app.emit("network://sector-spawned", serde_json::json!({
+        "sectorId": &sector_id,
+        "hostPeerId": &host_peer_id,
+    }));
+
+    Ok(())
+}
+
+/// Remove a sector from the global map.
+#[tauri::command]
+pub async fn remove_sector(
+    state: tauri::State<'_, SharedNetworkState>,
+    app: AppHandle,
+    sector_id: String,
+) -> Result<(), String> {
+    let mut net = state.lock().await;
+
+    if net.sectors.remove(&sector_id).is_none() {
+        return Err(format!("Sector '{}' not found", sector_id));
+    }
+
+    let _ = app.emit("network://sector-removed", serde_json::json!({
+        "sectorId": &sector_id,
+    }));
+
+    Ok(())
+}
+
+/// Get all registered sectors.
+#[tauri::command]
+pub async fn get_sectors(
+    state: tauri::State<'_, SharedNetworkState>,
+) -> Result<Vec<SectorEntry>, String> {
+    let net = state.lock().await;
+    Ok(net.sectors.values().cloned().collect())
 }

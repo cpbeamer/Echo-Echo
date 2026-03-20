@@ -53,6 +53,12 @@ export type {
   PeerLeftEvent,
   SectorHostedEvent,
   BombReceivedEvent,
+  SectorBounds,
+  SectorInfo,
+  SectorExpansionConfig,
+  SectorSpawnedEvent,
+  SectorRemovedEvent,
+  AgentMigrationEvent,
 } from './networking';
 
-export { DEFAULT_NETWORK_CONFIG } from './networking';
+export { DEFAULT_NETWORK_CONFIG, DEFAULT_SECTOR_EXPANSION_CONFIG } from './networking';

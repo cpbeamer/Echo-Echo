@@ -1,12 +1,20 @@
 /**
- * Networking Store – Svelte 5 reactive state for P2P networking (Epic 3.0).
+ * Networking Store – Svelte 5 reactive state for P2P networking (Epic 3.0 + 3.1).
  *
  * Keeps network-specific state separate from the simulation store while
- * exposing reactive primitives for the NetworkPanel UI.
+ * exposing reactive primitives for the NetworkPanel and GlobalMapView UIs.
  */
 
-import type { PeerInfo, PeerRole, NetworkStatus, NetworkEvent, NetworkConfig } from '../../types';
-import { DEFAULT_NETWORK_CONFIG } from '../../types';
+import type {
+  PeerInfo,
+  PeerRole,
+  NetworkStatus,
+  NetworkEvent,
+  NetworkConfig,
+  SectorInfo,
+  SectorExpansionConfig,
+} from '../../types';
+import { DEFAULT_NETWORK_CONFIG, DEFAULT_SECTOR_EXPANSION_CONFIG } from '../../types';
 
 /** Maximum events retained in the network event log. */
 const MAX_NETWORK_EVENTS = 100;
@@ -22,6 +30,13 @@ class NetworkingState {
   events: NetworkEvent[] = $state([]);
   /** The sector ID this node is hosting or visiting. */
   activeSectorId: string | null = $state(null);
+
+  /** All sectors in the global map (Epic 3.1). */
+  sectors: SectorInfo[] = $state([]);
+  /** Sector expansion configuration (Epic 3.1). */
+  expansionConfig: SectorExpansionConfig = $state({ ...DEFAULT_SECTOR_EXPANSION_CONFIG });
+  /** Whether the global map overlay is visible (Epic 3.1). */
+  showGlobalMap: boolean = $state(false);
 
   /** Update our own peer ID after network start. */
   setPeerId(id: string): void {
@@ -64,6 +79,33 @@ class NetworkingState {
     this.events = [fullEvent, ...this.events].slice(0, MAX_NETWORK_EVENTS);
   }
 
+  // ── Sector Expansion (Epic 3.1) ─────────────────────────────────────────
+
+  /** Replace the entire sectors list. */
+  setSectors(sectors: SectorInfo[]): void {
+    this.sectors = [...sectors];
+  }
+
+  /** Add a single sector to the list. */
+  addSector(info: SectorInfo): void {
+    this.sectors = [...this.sectors, info];
+  }
+
+  /** Remove a sector by ID. */
+  removeSector(sectorId: string): void {
+    this.sectors = this.sectors.filter((s) => s.sectorId !== sectorId);
+  }
+
+  /** Update the expansion configuration. */
+  updateExpansionConfig(partial: Partial<SectorExpansionConfig>): void {
+    this.expansionConfig = { ...this.expansionConfig, ...partial };
+  }
+
+  /** Toggle global map visibility. */
+  toggleGlobalMap(): void {
+    this.showGlobalMap = !this.showGlobalMap;
+  }
+
   /** Reset all networking state (called on disconnect). */
   reset(): void {
     this.peerId = null;
@@ -72,8 +114,11 @@ class NetworkingState {
     this.connectedPeers = [];
     this.activeSectorId = null;
     this.events = [];
+    this.sectors = [];
+    this.showGlobalMap = false;
     nextEventId = 0;
   }
 }
 
 export const networking = new NetworkingState();
+

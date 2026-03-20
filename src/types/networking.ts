@@ -108,6 +108,52 @@ export const DEFAULT_NETWORK_CONFIG: NetworkConfig = {
   maxVisitors: 8,
 };
 
+// ── Sector Expansion (Epic 3.1) ─────────────────────────────────────────────
+
+/** Axis-aligned bounding rectangle for a sector in global grid coordinates. */
+export interface SectorBounds {
+  /** Top-left X in global coordinates. */
+  originX: number;
+  /** Top-left Y in global coordinates. */
+  originY: number;
+  /** Width of the sector in cells. */
+  width: number;
+  /** Height of the sector in cells. */
+  height: number;
+}
+
+/** Metadata describing a sector on the global map. */
+export interface SectorInfo {
+  sectorId: string;
+  hostPeerId: PeerId;
+  bounds: SectorBounds;
+  /** Number of agents currently in this sector. */
+  agentCount: number;
+  /** The faction that has the most agents in this sector. */
+  dominantFaction: Faction;
+  /** IDs of sectors that share a boundary edge with this one. */
+  adjacentSectorIds: string[];
+}
+
+/** Configurable thresholds for dynamic sector expansion. */
+export interface SectorExpansionConfig {
+  /** When connectedUsers ≥ threshold × sectorCount, spawn a new sector. */
+  userThresholdForNewSector: number;
+  /** Hard cap on total sectors. */
+  maxSectors: number;
+  /** Width/height of each generated sector in grid cells. */
+  sectorGridSize: number;
+  /** Distance (in cells) from sector edge that qualifies an agent for migration. */
+  migrationEdgeThreshold: number;
+}
+
+export const DEFAULT_SECTOR_EXPANSION_CONFIG: SectorExpansionConfig = {
+  userThresholdForNewSector: 4,
+  maxSectors: 16,
+  sectorGridSize: 100,
+  migrationEdgeThreshold: 2,
+};
+
 // ── Remote Data Bomb ────────────────────────────────────────────────────────
 
 /** A data bomb request sent from a visitor to the sector host. */
@@ -123,7 +169,10 @@ export type NetworkEvent =
   | PeerJoinedEvent
   | PeerLeftEvent
   | SectorHostedEvent
-  | BombReceivedEvent;
+  | BombReceivedEvent
+  | SectorSpawnedEvent
+  | SectorRemovedEvent
+  | AgentMigrationEvent;
 
 interface BaseNetworkEvent {
   id: string;
@@ -151,4 +200,22 @@ export interface BombReceivedEvent extends BaseNetworkEvent {
   type: 'bomb_received';
   senderPeerId: PeerId;
   affectedCount: number;
+}
+
+export interface SectorSpawnedEvent extends BaseNetworkEvent {
+  type: 'sector_spawned';
+  sectorId: string;
+  hostPeerId: PeerId;
+}
+
+export interface SectorRemovedEvent extends BaseNetworkEvent {
+  type: 'sector_removed';
+  sectorId: string;
+}
+
+export interface AgentMigrationEvent extends BaseNetworkEvent {
+  type: 'agent_migration';
+  agentId: string;
+  fromSectorId: string;
+  toSectorId: string;
 }

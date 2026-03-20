@@ -23,6 +23,9 @@ pub fn run() {
             networking::get_connected_peers,
             networking::host_sector,
             networking::broadcast_state,
+            networking::spawn_sector,
+            networking::remove_sector,
+            networking::get_sectors,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

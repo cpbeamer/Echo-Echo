@@ -1,5 +1,6 @@
 <script lang="ts">
   import { networking } from '$lib/stores/networking.svelte';
+  import GlobalMapView from './GlobalMapView.svelte';
   import {
     startNetwork,
     stopNetwork,
@@ -208,6 +209,22 @@
         {/if}
       </div>
     </div>
+
+    <!-- Global Map (Epic 3.1) -->
+    {#if networking.sectors.length > 0 || networking.role !== 'disconnected'}
+      <div class="section">
+        <button
+          class="btn btn-small map-toggle"
+          id="btn-toggle-map"
+          onclick={() => networking.toggleGlobalMap()}
+        >
+          {networking.showGlobalMap ? '▼' : '▶'} Global Map
+        </button>
+      </div>
+      {#if networking.showGlobalMap}
+        <GlobalMapView />
+      {/if}
+    {/if}
   {/if}
 </div>
 

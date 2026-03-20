@@ -38,7 +38,17 @@ export {
   hostSector,
   broadcastState,
   subscribeToNetworkEvents,
+  spawnSectorCmd,
+  removeSectorCmd,
+  getSectors,
 } from './network-manager';
 export { SectorHost, serializeFullState } from './sector-host';
 export { SectorVisitor } from './sector-visitor';
 
+// Epic 3.1 – Sector Expansion
+export { SectorManager } from './sector-manager';
+export {
+  detectMigrationCandidates,
+  migrateAgent,
+  receiveMigratedAgent,
+} from './agent-migration';
