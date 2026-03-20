@@ -6,7 +6,7 @@
  * and the currently selected agent.
  */
 
-import type { Agent, DataBomb, DataBombRecord, SimulationConfig, Shockwave, Faction } from '../../types';
+import type { Agent, DataBomb, DataBombRecord, SimulationConfig, Shockwave, Faction, LingoSwapBubble, LingoLeaderboardEntry, MemeSwapResult } from '../../types';
 import { DEFAULT_CONFIG } from '../../types';
 import { createAgents } from '../../engine/agent-factory';
 import { tickPhysics } from '../../engine/physics';
@@ -28,6 +28,7 @@ import {
 import { brainSettings } from './brain-settings.svelte';
 import { newsfeed } from './newsfeed.svelte';
 import { networking } from './networking.svelte';
+import { computeLingoLeaderboard } from '../../engine/lingo-leaderboard';
 
 export type SimulationSpeed = 0 | 1 | 2 | 5;
 
@@ -55,7 +56,17 @@ const REPRODUCTION_INTERVAL = 10;
 /** How often to recompute faction progress (in ticks). */
 const FACTION_PROGRESS_INTERVAL = 50;
 
+/** How often to recompute the lingo leaderboard (in ticks). */
+const LEADERBOARD_INTERVAL = 50;
+
+/** Duration of the lingo swap bubble float animation (in sim ticks). */
+const LINGO_BUBBLE_FRAMES = 30;
+
+/** Max concurrent lingo bubbles to prevent visual clutter. */
+const MAX_LINGO_BUBBLES = 20;
+
 let nextBombId = 0;
+let nextBubbleId = 0;
 
 class SimulationState {
   agents: Agent[] = $state([]);
@@ -80,6 +91,12 @@ class SimulationState {
 
   /** Agent IDs currently highlighted (e.g. from history hover). */
   highlightedAgentIds: Set<string> = $state(new Set());
+
+  /** Active lingo swap bubble animations rendered on the canvas. */
+  activeLingoSwaps: LingoSwapBubble[] = $state([]);
+
+  /** Global lingo leaderboard: top 10 most viral terms. */
+  lingoLeaderboard: LingoLeaderboardEntry[] = $state([]);
 
   /** Population history ring buffer: snapshots sampled every POPULATION_SNAPSHOT_INTERVAL ticks. */
   populationHistory: { tick: number; alive: number; births: number; deaths: number }[] = $state([]);
@@ -137,8 +154,11 @@ class SimulationState {
     this.populationHistory = [];
     this.birthsSinceSnapshot = 0;
     this.deathsSinceSnapshot = 0;
+    this.activeLingoSwaps = [];
+    this.lingoLeaderboard = [];
     newsfeed.clear();
     nextBombId = 0;
+    nextBubbleId = 0;
   }
 
   /** Start the simulation loop. */
@@ -367,13 +387,16 @@ class SimulationState {
 
     // Meme swaps (every 5th tick to reduce CPU)
     if (this.tick % 5 === 0) {
-      const swapCount = processMemeSwaps(this.aliveAgents);
-      if (swapCount > 0) {
+      const swapResults: MemeSwapResult[] = processMemeSwaps(this.aliveAgents);
+      if (swapResults.length > 0) {
         newsfeed.push({
           type: 'meme_swap',
-          message: `🔄 ${swapCount} meme swap${swapCount > 1 ? 's' : ''} this tick`,
-          swapCount,
+          message: `🔄 ${swapResults.length} meme swap${swapResults.length > 1 ? 's' : ''} this tick`,
+          swapCount: swapResults.length,
         });
+
+        // Spawn lingo bubble animations for visible swaps
+        this.spawnLingoBubbles(swapResults);
       }
     }
 
@@ -499,7 +522,72 @@ class SimulationState {
         .filter((sw) => sw.frame < sw.totalFrames);
     }
 
+    // Advance lingo swap bubble animations and remove completed ones
+    if (this.activeLingoSwaps.length > 0) {
+      this.activeLingoSwaps = this.activeLingoSwaps
+        .map((b) => ({ ...b, frame: b.frame + 1 }))
+        .filter((b) => b.frame < b.totalFrames);
+    }
+
+    // Lingo leaderboard recomputation (Epic 4.0)
+    if (this.tick % LEADERBOARD_INTERVAL === 0) {
+      this.lingoLeaderboard = computeLingoLeaderboard(
+        this.aliveAgents,
+        this.lingoLeaderboard,
+      );
+    }
+
     this.tick++;
+  }
+
+  /**
+   * Spawn floating lingo bubbles from successful meme swap results.
+   * Limits total active bubbles to avoid visual clutter.
+   */
+  private spawnLingoBubbles(results: MemeSwapResult[]): void {
+    // Build a quick lookup for agent positions
+    const positionById = new Map<string, { x: number; y: number }>();
+    for (const agent of this.agents) {
+      positionById.set(agent.id, { x: agent.position.x, y: agent.position.y });
+    }
+
+    const newBubbles: LingoSwapBubble[] = [];
+
+    for (const result of results) {
+      const fromPos = positionById.get(result.fromId);
+      const toPos = positionById.get(result.toId);
+      if (!fromPos || !toPos) continue;
+
+      // Create a bubble for each term given (A → B)
+      for (const term of result.termsGiven) {
+        if (this.activeLingoSwaps.length + newBubbles.length >= MAX_LINGO_BUBBLES) break;
+        newBubbles.push({
+          id: `lb-${nextBubbleId++}`,
+          term,
+          fromPosition: { ...fromPos },
+          toPosition: { ...toPos },
+          frame: 0,
+          totalFrames: LINGO_BUBBLE_FRAMES,
+        });
+      }
+
+      // Create a bubble for each term received (B → A)
+      for (const term of result.termsReceived) {
+        if (this.activeLingoSwaps.length + newBubbles.length >= MAX_LINGO_BUBBLES) break;
+        newBubbles.push({
+          id: `lb-${nextBubbleId++}`,
+          term,
+          fromPosition: { ...toPos },
+          toPosition: { ...fromPos },
+          frame: 0,
+          totalFrames: LINGO_BUBBLE_FRAMES,
+        });
+      }
+    }
+
+    if (newBubbles.length > 0) {
+      this.activeLingoSwaps = [...this.activeLingoSwaps, ...newBubbles];
+    }
   }
 }
 

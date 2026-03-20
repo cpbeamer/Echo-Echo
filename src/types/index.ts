@@ -35,6 +35,9 @@ export type {
   ManifestoBombEvent,
   LingoCluster,
   LingoTerm,
+  MemeSwapResult,
+  LingoSwapBubble,
+  LingoLeaderboardEntry,
 } from './hud';
 
 export type {

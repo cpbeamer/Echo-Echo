@@ -27,7 +27,7 @@ The agent has just been exposed to the following information:
 Analyze the Data Bomb text and determine:
 1. **How the agent's DNA vector should shift** based on the themes, arguments, and tone of the text. Return small deltas (between -0.15 and 0.15) for each axis. Only shift axes that are clearly influenced by the text.
 2. **A short lore entry** summarizing what the agent "learned" or "felt" from this data (max 1-2 sentences).
-3. **New slang/lingo** the agent might adopt — creative portmanteaus or phrases inspired by the text's themes (0-2 entries). These should be pronounceable, memorable, and blend concepts from the text.
+3. **New slang/lingo** the agent might adopt — blend 2+ words from the Data Bomb text into pronounceable portmanteaus (e.g., "rebellion" + "algorithm" → "Rebelgorithm"). Generate 1-3 creative entries. Terms should be catchy, memorable, and evoke the source material.
 
 ## Response Format
 
@@ -50,5 +50,5 @@ Respond with ONLY a single JSON object. No explanations, no markdown, no extra t
 Rules:
 - vectorDelta values MUST be between -0.15 and 0.15
 - newLore MUST be an array of 1-2 short strings
-- newLingo MUST be an object with 0-2 entries
+- newLingo MUST be an object with 1-3 entries (portmanteau blends of the Data Bomb's themes)
 - Do NOT include any text outside the JSON object

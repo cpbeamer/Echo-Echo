@@ -6,6 +6,9 @@
  */
 
 import type { Agent, DNAVector } from '../types';
+import type { MemeSwapResult } from '../types/hud';
+
+export type { MemeSwapResult };
 
 /**
  * Compute ideological similarity between two agents as a [0, 1] score.
@@ -39,52 +42,63 @@ export function spatialDistance(a: Agent, b: Agent): number {
  * If the swap triggers, each agent donates one random lingo entry
  * to the other (if either has lingo to share).
  *
- * Returns true if a swap occurred.
+ * Returns a MemeSwapResult if a swap occurred, or null if it didn't.
  */
-export function attemptMemeSwap(agentA: Agent, agentB: Agent): boolean {
+export function attemptMemeSwap(agentA: Agent, agentB: Agent): MemeSwapResult | null {
   const similarity = ideologicalSimilarity(agentA.vector, agentB.vector);
 
   // Roll against similarity — higher similarity = higher swap chance
   if (Math.random() > similarity) {
-    return false;
+    return null;
   }
 
   const lingoKeysA = Object.keys(agentA.lingo);
   const lingoKeysB = Object.keys(agentB.lingo);
 
+  const termsGiven: string[] = [];
+  const termsReceived: string[] = [];
+
   // A donates to B
   if (lingoKeysA.length > 0) {
     const keyA = lingoKeysA[Math.floor(Math.random() * lingoKeysA.length)];
     agentB.lingo[keyA] = agentA.lingo[keyA];
+    termsGiven.push(keyA);
   }
 
   // B donates to A
   if (lingoKeysB.length > 0) {
     const keyB = lingoKeysB[Math.floor(Math.random() * lingoKeysB.length)];
     agentA.lingo[keyB] = agentB.lingo[keyB];
+    termsReceived.push(keyB);
   }
 
-  return true;
+  return {
+    fromId: agentA.id,
+    toId: agentB.id,
+    termsGiven,
+    termsReceived,
+  };
 }
 
 /**
  * Process meme swaps for the entire agent population.
  * Only adjacent agents (within `proximityRadius` cells) are eligible.
- * Returns total number of swaps that occurred.
+ * Returns an array of MemeSwapResult for all successful swaps.
  */
-export function processMemeSwaps(agents: Agent[], proximityRadius: number = 3): number {
-  let swapCount = 0;
+export function processMemeSwaps(agents: Agent[], proximityRadius: number = 3): MemeSwapResult[] {
+  const results: MemeSwapResult[] = [];
 
   // Naive O(n²) — fine for 200-500 agents. Spatial hash needed for 5k+.
   for (let i = 0; i < agents.length; i++) {
     for (let j = i + 1; j < agents.length; j++) {
       if (spatialDistance(agents[i], agents[j]) <= proximityRadius) {
-        if (attemptMemeSwap(agents[i], agents[j])) {
-          swapCount++;
+        const result = attemptMemeSwap(agents[i], agents[j]);
+        if (result) {
+          results.push(result);
         }
       }
     }
   }
 
-  return swapCount;
+  return results;
 }

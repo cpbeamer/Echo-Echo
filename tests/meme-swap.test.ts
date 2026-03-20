@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { attemptMemeSwap, ideologicalSimilarity, processMemeSwaps } from '../src/engine/meme-swap';
+import type { MemeSwapResult } from '../src/types/hud';
 import { createAgent, resetAgentIdCounter } from '../src/engine/agent-factory';
 
 describe('Ideological Similarity', () => {
@@ -28,8 +29,7 @@ describe('Meme Swap', () => {
     resetAgentIdCounter();
   });
 
-  it('swaps lingo between nearby identical agents', () => {
-    // Create two agents at same position with identical DNA → guaranteed swap
+  it('swaps lingo between nearby identical agents and returns MemeSwapResult', () => {
     const a = createAgent(50, 50);
     const b = createAgent(50, 50);
 
@@ -40,12 +40,44 @@ describe('Meme Swap', () => {
     a.lingo = { 'Sec-Jedi': 'A leader' };
     b.lingo = { 'Void-Born': 'A nihilist' };
 
-    const swapped = attemptMemeSwap(a, b);
-    expect(swapped).toBe(true);
+    const result: MemeSwapResult | null = attemptMemeSwap(a, b);
+    expect(result).not.toBeNull();
 
     // A should have B's lingo and vice versa
     expect(a.lingo['Void-Born']).toBe('A nihilist');
     expect(b.lingo['Sec-Jedi']).toBe('A leader');
+
+    // Result should contain correct IDs and terms
+    expect(result!.fromId).toBe(a.id);
+    expect(result!.toId).toBe(b.id);
+    expect(result!.termsGiven).toContain('Sec-Jedi');
+    expect(result!.termsReceived).toContain('Void-Born');
+  });
+
+  it('returns null when swap probability fails', () => {
+    const a = createAgent(50, 50);
+    const b = createAgent(50, 50);
+
+    // Maximally different vectors → near-zero swap probability
+    a.vector = { analytical_emotional: 0, altruistic_selfish: 0, order_chaos: 0 };
+    b.vector = { analytical_emotional: 1, altruistic_selfish: 1, order_chaos: 1 };
+
+    a.lingo = { 'term': 'meaning' };
+    b.lingo = { 'other': 'meaning' };
+
+    // With maximally different agents, similarity is ~0 so swap should almost never happen
+    // Run multiple times to verify at least most return null
+    let nullCount = 0;
+    for (let i = 0; i < 100; i++) {
+      // Reset lingo each time
+      a.lingo = { 'term': 'meaning' };
+      b.lingo = { 'other': 'meaning' };
+      const result = attemptMemeSwap(a, b);
+      if (result === null) nullCount++;
+    }
+
+    // With similarity ≈ 0, nearly all attempts should fail
+    expect(nullCount).toBeGreaterThan(90);
   });
 });
 
@@ -54,7 +86,7 @@ describe('processMemeSwaps', () => {
     resetAgentIdCounter();
   });
 
-  it('processes swaps for agents within proximity radius', () => {
+  it('returns array of MemeSwapResult for agents within proximity radius', () => {
     const a = createAgent(50, 50);
     const b = createAgent(51, 50); // 1 cell apart — within default radius of 3
     const c = createAgent(90, 90); // far away — not within radius
@@ -66,11 +98,18 @@ describe('processMemeSwaps', () => {
     b.lingo = { 'term-b': 'meaning-b' };
     c.lingo = { 'term-c': 'meaning-c' };
 
-    const swapCount = processMemeSwaps([a, b, c], 3);
+    const results: MemeSwapResult[] = processMemeSwaps([a, b, c], 3);
 
     // a and b should have swapped, c should be untouched
-    expect(swapCount).toBeGreaterThanOrEqual(1);
+    expect(results.length).toBeGreaterThanOrEqual(1);
     expect(a.lingo['term-b']).toBe('meaning-b');
-    expect(c.lingo).toEqual({ 'term-c': 'meaning-c' }); // c unchanged
+    expect(c.lingo).toEqual({ 'term-c': 'meaning-c' });
+
+    // Verify result structure
+    const firstResult = results[0];
+    expect(firstResult).toHaveProperty('fromId');
+    expect(firstResult).toHaveProperty('toId');
+    expect(firstResult).toHaveProperty('termsGiven');
+    expect(firstResult).toHaveProperty('termsReceived');
   });
 });

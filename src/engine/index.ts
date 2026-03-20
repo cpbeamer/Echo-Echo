@@ -6,6 +6,7 @@ export { createAgent, createAgents, createChildAgent, dnaToColor, resetAgentIdCo
 export { classifyFaction, areOpposingFactions, FACTION_META } from './factions';
 export { mutateAgentFromText, applyDNAUpdate } from './dna-mutation';
 export { attemptMemeSwap, ideologicalSimilarity, processMemeSwaps } from './meme-swap';
+export type { MemeSwapResult } from './meme-swap';
 export { detectConflicts, resolveConflict } from './conflict';
 export { tickPhysics } from './physics';
 
@@ -78,3 +79,7 @@ export {
   distributeRequests,
   computePeerLoad,
 } from './inference-load-balancer';
+
+// Epic 4.0 – The Lingo-Gen
+export { buildLingoGenPrompt, extractThemes } from './lingo-gen-prompt';
+export { computeLingoLeaderboard } from './lingo-leaderboard';

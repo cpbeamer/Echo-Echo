@@ -65,6 +65,12 @@
     renderer?.setTargetPickMode(picking);
   });
 
+  /** Sync lingo swap bubbles to the renderer (Epic 4.0). */
+  $effect(() => {
+    const bubbles = simulation.activeLingoSwaps;
+    renderer?.syncLingoBubbles(bubbles);
+  });
+
   /** Handle mouse wheel for zoom. */
   function onWheel(e: WheelEvent) {
     e.preventDefault();

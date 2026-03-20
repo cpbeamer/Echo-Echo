@@ -10,9 +10,11 @@ import {
   Application,
   Container,
   Graphics,
+  Text,
+  TextStyle,
   type ColorSource,
 } from 'pixi.js';
-import type { Agent, Shockwave } from '../types';
+import type { Agent, Shockwave, LingoSwapBubble } from '../types';
 import { FACTION_META } from './factions';
 
 /** Duration of the death dissolve animation in renderer frames. Must match DEATH_ANIM_TICKS in simulation store. */
@@ -46,6 +48,20 @@ interface ShockwaveNode {
   color: number;
 }
 
+/** Internal bookkeeping for a floating lingo bubble. */
+interface BubbleNode {
+  id: string;
+  root: Container;
+  pill: Graphics;
+  label: Text;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  frame: number;
+  totalFrames: number;
+}
+
 export class PixiRenderer {
   private app: Application | null = null;
   private viewport: Container = new Container();
@@ -53,6 +69,7 @@ export class PixiRenderer {
   private shockwaves: ShockwaveNode[] = [];
   private crosshair: Graphics = new Graphics();
   private crosshairVisible = false;
+  private lingoBubbles: BubbleNode[] = [];
 
   /** Elapsed time counter for wobble oscillation. */
   private elapsedTime = 0;
@@ -251,6 +268,101 @@ export class PixiRenderer {
     }
     this.agentNodes.clear();
     this.shockwaves = [];
+    this.lingoBubbles = [];
+  }
+
+  /**
+   * Sync lingo swap bubbles from the store.
+   * Creates new bubbles, advances existing ones, removes completed ones.
+   */
+  syncLingoBubbles(bubbles: LingoSwapBubble[]): void {
+    const activeBubbleIds = new Set(bubbles.map((b) => b.id));
+
+    // Remove completed bubbles
+    for (let i = this.lingoBubbles.length - 1; i >= 0; i--) {
+      const node = this.lingoBubbles[i];
+      if (!activeBubbleIds.has(node.id)) {
+        this.viewport.removeChild(node.root);
+        node.root.destroy({ children: true });
+        this.lingoBubbles.splice(i, 1);
+      }
+    }
+
+    const existingIds = new Set(this.lingoBubbles.map((b) => b.id));
+
+    // Create new bubbles
+    for (const bubble of bubbles) {
+      if (existingIds.has(bubble.id)) continue;
+
+      const root = new Container();
+
+      // Text label
+      const style = new TextStyle({
+        fontSize: 9,
+        fontFamily: 'monospace',
+        fill: 0xffffff,
+        letterSpacing: 0.5,
+      });
+      const label = new Text({ text: bubble.term.slice(0, 12), style });
+
+      // Scale for grid-space (text is in pixels, grid is in cells)
+      const textScale = 1 / 8;
+
+      // Measure pill dimensions from unscaled label size, then apply scale
+      const pillW = (label.width * textScale) + 0.4;
+      const pillH = (label.height * textScale) + 0.2;
+
+      label.scale.set(textScale, textScale);
+      label.anchor.set(0.5, 0.5);
+
+      // Pill background behind text
+      const pill = new Graphics();
+      pill
+        .roundRect(-pillW / 2, -pillH / 2, pillW, pillH, 0.15)
+        .fill({ color: 0x6366f1, alpha: 0.7 });
+
+      root.addChild(pill, label);
+      root.position.set(bubble.fromPosition.x, bubble.fromPosition.y);
+      this.viewport.addChild(root);
+
+      this.lingoBubbles.push({
+        id: bubble.id,
+        root,
+        pill,
+        label,
+        fromX: bubble.fromPosition.x,
+        fromY: bubble.fromPosition.y,
+        toX: bubble.toPosition.x,
+        toY: bubble.toPosition.y,
+        frame: bubble.frame,
+        totalFrames: bubble.totalFrames,
+      });
+    }
+
+    // Build a Map for O(1) bubble lookup during position updates
+    const bubbleById = new Map(bubbles.map((b) => [b.id, b]));
+
+    // Update positions for all active bubbles
+    for (const node of this.lingoBubbles) {
+      const bubble = bubbleById.get(node.id);
+      if (!bubble) continue;
+
+      node.frame = bubble.frame;
+      const progress = node.frame / node.totalFrames;
+
+      // Lerp position from sender to receiver
+      const x = node.fromX + (node.toX - node.fromX) * progress;
+      const y = node.fromY + (node.toY - node.fromY) * progress;
+
+      // Arc upward for a floating effect
+      const arcHeight = 0.8;
+      const arc = Math.sin(progress * Math.PI) * arcHeight;
+
+      node.root.position.set(x, y - arc);
+
+      // Fade out toward the end
+      node.root.alpha = progress < 0.7 ? 1 : 1 - ((progress - 0.7) / 0.3);
+    }
   }
 
   // ── Private Helpers ──────────────────────────────────────────────────
