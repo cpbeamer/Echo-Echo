@@ -6,7 +6,7 @@
  * and the currently selected agent.
  */
 
-import type { Agent, DataBomb, DataBombRecord, SimulationConfig, Shockwave } from '../../types';
+import type { Agent, DataBomb, DataBombRecord, SimulationConfig, Shockwave, Faction } from '../../types';
 import { DEFAULT_CONFIG } from '../../types';
 import { createAgents } from '../../engine/agent-factory';
 import { tickPhysics } from '../../engine/physics';
@@ -20,8 +20,14 @@ import {
   tickReproduction,
   applyNaturalSelection,
 } from '../../engine/lifecycle';
+import {
+  computeFactionProgress,
+  checkContestedSector,
+  startManifestoDefusal,
+} from '../../engine/faction-warfare';
 import { brainSettings } from './brain-settings.svelte';
 import { newsfeed } from './newsfeed.svelte';
+import { networking } from './networking.svelte';
 
 export type SimulationSpeed = 0 | 1 | 2 | 5;
 
@@ -45,6 +51,9 @@ const MAX_POPULATION_HISTORY = 200;
 
 /** How often to run reproduction checks (in ticks). */
 const REPRODUCTION_INTERVAL = 10;
+
+/** How often to recompute faction progress (in ticks). */
+const FACTION_PROGRESS_INTERVAL = 50;
 
 let nextBombId = 0;
 
@@ -240,6 +249,18 @@ class SimulationState {
 
     this.isPickingTarget = false;
 
+    // Manifesto defusal: if dropped in a contested sector, start defusal (Epic 3.2)
+    if (isManifesto && checkContestedSector(this.agents)) {
+      const defusal = startManifestoDefusal(
+        record.id,
+        networking.activeSectorId ?? 'local',
+        // The manifesto favors the faction most represented among affected agents
+        this.dominantFactionAmong(affectedIds),
+        networking.warfareConfig,
+      );
+      networking.addDefusal(defusal);
+    }
+
     // Newsfeed event
     if (bombType === 'amnesia') {
       newsfeed.push({
@@ -274,6 +295,36 @@ class SimulationState {
   /** Clear any agent highlights. */
   clearHighlights(): void {
     this.highlightedAgentIds = new Set();
+  }
+
+  /**
+   * Determine the dominant faction among a set of agent IDs.
+   * Used by manifesto defusal to identify which faction the bomb favors.
+   */
+  private dominantFactionAmong(agentIds: string[]): Faction {
+    const counts: Record<string, number> = {};
+    // Pre-build lookup for O(1) access by ID
+    const agentById: Record<string, Agent> = {};
+    for (const agent of this.agents) {
+      agentById[agent.id] = agent;
+    }
+
+    for (const id of agentIds) {
+      const agent = agentById[id];
+      if (agent && agent.faction !== 'unaligned') {
+        counts[agent.faction] = (counts[agent.faction] ?? 0) + 1;
+      }
+    }
+
+    let best: Faction = 'unaligned';
+    let bestCount = 0;
+    for (const [faction, count] of Object.entries(counts)) {
+      if (count > bestCount) {
+        best = faction as Faction;
+        bestCount = count;
+      }
+    }
+    return best;
   }
 
   /** The main game loop, driven by requestAnimationFrame. */
@@ -429,6 +480,17 @@ class SimulationState {
     // Update HUD-facing counters
     this.thoughtsPending = this.orchestrator.pendingCount;
     this.thoughtsProcessing = this.orchestrator.processing;
+
+    // Faction warfare progress (Epic 3.2)
+    if (this.tick % FACTION_PROGRESS_INTERVAL === 0 && this.tick > 0) {
+      const updatedProgress = computeFactionProgress(
+        this.agents,
+        networking.factionProgress,
+        networking.computeBoosts,
+        networking.warfareConfig,
+      );
+      networking.updateFactionProgress(updatedProgress);
+    }
 
     // Advance shockwave animations
     if (this.activeShockwaves.length > 0) {

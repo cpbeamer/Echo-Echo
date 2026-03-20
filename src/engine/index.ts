@@ -52,3 +52,14 @@ export {
   migrateAgent,
   receiveMigratedAgent,
 } from './agent-migration';
+
+// Epic 3.2 – Faction Warfare
+export {
+  createInitialFactionProgress,
+  computeFactionProgress,
+  applyComputeBoost,
+  startManifestoDefusal,
+  contributeToDefusal,
+  resolveDefusal,
+  checkContestedSector,
+} from './faction-warfare';

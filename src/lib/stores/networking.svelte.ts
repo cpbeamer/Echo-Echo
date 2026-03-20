@@ -1,5 +1,5 @@
 /**
- * Networking Store – Svelte 5 reactive state for P2P networking (Epic 3.0 + 3.1).
+ * Networking Store – Svelte 5 reactive state for P2P networking (Epic 3.0 + 3.1 + 3.2).
  *
  * Keeps network-specific state separate from the simulation store while
  * exposing reactive primitives for the NetworkPanel and GlobalMapView UIs.
@@ -13,8 +13,17 @@ import type {
   NetworkConfig,
   SectorInfo,
   SectorExpansionConfig,
+  FactionProgress,
+  ComputeBoost,
+  ManifestoDefusal,
+  FactionWarfareConfig,
 } from '../../types';
-import { DEFAULT_NETWORK_CONFIG, DEFAULT_SECTOR_EXPANSION_CONFIG } from '../../types';
+import {
+  DEFAULT_NETWORK_CONFIG,
+  DEFAULT_SECTOR_EXPANSION_CONFIG,
+  DEFAULT_FACTION_WARFARE_CONFIG,
+} from '../../types';
+import { createInitialFactionProgress } from '../../engine/faction-warfare';
 
 /** Maximum events retained in the network event log. */
 const MAX_NETWORK_EVENTS = 100;
@@ -37,6 +46,17 @@ class NetworkingState {
   expansionConfig: SectorExpansionConfig = $state({ ...DEFAULT_SECTOR_EXPANSION_CONFIG });
   /** Whether the global map overlay is visible (Epic 3.1). */
   showGlobalMap: boolean = $state(false);
+
+  // ── Faction Warfare (Epic 3.2) ─────────────────────────────────────────
+
+  /** Per-faction victory progress bars. */
+  factionProgress: FactionProgress[] = $state(createInitialFactionProgress());
+  /** Active compute boost donations from peers. */
+  computeBoosts: ComputeBoost[] = $state([]);
+  /** In-progress manifesto defusals. */
+  activeDefusals: ManifestoDefusal[] = $state([]);
+  /** Faction warfare configuration. */
+  warfareConfig: FactionWarfareConfig = $state({ ...DEFAULT_FACTION_WARFARE_CONFIG });
 
   /** Update our own peer ID after network start. */
   setPeerId(id: string): void {
@@ -106,6 +126,49 @@ class NetworkingState {
     this.showGlobalMap = !this.showGlobalMap;
   }
 
+  // ── Faction Warfare (Epic 3.2) ─────────────────────────────────────────
+
+  /** Replace the entire faction progress array. */
+  updateFactionProgress(progress: FactionProgress[]): void {
+    this.factionProgress = [...progress];
+  }
+
+  /** Register a new compute boost from a peer. */
+  addComputeBoost(boost: ComputeBoost): void {
+    // Replace any existing boost from the same peer
+    this.computeBoosts = [
+      ...this.computeBoosts.filter((b) => b.peerId !== boost.peerId),
+      boost,
+    ];
+  }
+
+  /** Remove a peer's compute boost (e.g., on disconnect). */
+  removeComputeBoost(peerId: string): void {
+    this.computeBoosts = this.computeBoosts.filter((b) => b.peerId !== peerId);
+  }
+
+  /** Add a new manifesto defusal. */
+  addDefusal(defusal: ManifestoDefusal): void {
+    this.activeDefusals = [...this.activeDefusals, defusal];
+  }
+
+  /** Update an existing defusal's progress. */
+  updateDefusal(bombId: string, patch: Partial<ManifestoDefusal>): void {
+    this.activeDefusals = this.activeDefusals.map((d) =>
+      d.bombId === bombId ? { ...d, ...patch } : d,
+    );
+  }
+
+  /** Remove a completed or expired defusal. */
+  removeDefusal(bombId: string): void {
+    this.activeDefusals = this.activeDefusals.filter((d) => d.bombId !== bombId);
+  }
+
+  /** Update the warfare configuration. */
+  updateWarfareConfig(partial: Partial<FactionWarfareConfig>): void {
+    this.warfareConfig = { ...this.warfareConfig, ...partial };
+  }
+
   /** Reset all networking state (called on disconnect). */
   reset(): void {
     this.peerId = null;
@@ -116,6 +179,9 @@ class NetworkingState {
     this.events = [];
     this.sectors = [];
     this.showGlobalMap = false;
+    this.factionProgress = createInitialFactionProgress();
+    this.computeBoosts = [];
+    this.activeDefusals = [];
     nextEventId = 0;
   }
 }

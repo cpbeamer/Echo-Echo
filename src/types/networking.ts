@@ -172,7 +172,9 @@ export type NetworkEvent =
   | BombReceivedEvent
   | SectorSpawnedEvent
   | SectorRemovedEvent
-  | AgentMigrationEvent;
+  | AgentMigrationEvent
+  | ComputeBoostEvent
+  | ManifestoDefusalEvent;
 
 interface BaseNetworkEvent {
   id: string;
@@ -219,3 +221,74 @@ export interface AgentMigrationEvent extends BaseNetworkEvent {
   fromSectorId: string;
   toSectorId: string;
 }
+
+export interface ComputeBoostEvent extends BaseNetworkEvent {
+  type: 'compute_boost';
+  peerId: PeerId;
+  faction: Faction;
+  computeUnits: number;
+}
+
+export interface ManifestoDefusalEvent extends BaseNetworkEvent {
+  type: 'manifesto_defusal';
+  bombId: string;
+  sectorId: string;
+  defuseProgress: number;
+  completed: boolean;
+}
+
+// ── Faction Warfare (Epic 3.2) ──────────────────────────────────────────────
+
+/** Per-faction victory progress state. */
+export interface FactionProgress {
+  faction: Faction;
+  /** Victory progress [0, 1]. */
+  progress: number;
+  /** Cumulative compute units donated to this faction. */
+  totalCompute: number;
+  /** Current alive agent count for this faction. */
+  agentCount: number;
+}
+
+/** A peer's GPU compute donation to their faction. */
+export interface ComputeBoost {
+  peerId: PeerId;
+  /** Faction this boost is allocated to. */
+  faction: Faction;
+  /** Arbitrary compute units contributed. */
+  computeUnits: number;
+}
+
+/** Active manifesto bomb defusal state. */
+export interface ManifestoDefusal {
+  /** ID of the manifesto bomb being defused. */
+  bombId: string;
+  /** Sector where the bomb was dropped. */
+  sectorId: string;
+  /** Faction the manifesto favors (opponents must defuse). */
+  targetFaction: Faction;
+  /** Defuse progress [0, 1]. */
+  defuseProgress: number;
+  /** Total compute needed to fully defuse. */
+  requiredCompute: number;
+  /** Compute contributed so far. */
+  contributedCompute: number;
+  /** Per-peer contribution ledger. */
+  contributors: Record<PeerId, number>;
+}
+
+/** Configurable parameters for the faction warfare subsystem. */
+export interface FactionWarfareConfig {
+  /** Progress increment per alive agent per update cycle. */
+  progressPerAgent: number;
+  /** Multiplier applied to thought-cycle slots from compute boosts. */
+  computeBoostMultiplier: number;
+  /** Compute units required to fully defuse a manifesto bomb. */
+  defusalComputeThreshold: number;
+}
+
+export const DEFAULT_FACTION_WARFARE_CONFIG: FactionWarfareConfig = {
+  progressPerAgent: 0.001,
+  computeBoostMultiplier: 1.5,
+  defusalComputeThreshold: 100,
+};

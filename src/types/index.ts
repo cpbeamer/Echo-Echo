@@ -59,6 +59,16 @@ export type {
   SectorSpawnedEvent,
   SectorRemovedEvent,
   AgentMigrationEvent,
+  ComputeBoostEvent,
+  ManifestoDefusalEvent,
+  FactionProgress,
+  ComputeBoost,
+  ManifestoDefusal,
+  FactionWarfareConfig,
 } from './networking';
 
-export { DEFAULT_NETWORK_CONFIG, DEFAULT_SECTOR_EXPANSION_CONFIG } from './networking';
+export {
+  DEFAULT_NETWORK_CONFIG,
+  DEFAULT_SECTOR_EXPANSION_CONFIG,
+  DEFAULT_FACTION_WARFARE_CONFIG,
+} from './networking';
