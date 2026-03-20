@@ -17,11 +17,14 @@ import type {
   ComputeBoost,
   ManifestoDefusal,
   FactionWarfareConfig,
+  PeerCapability,
+  DistributedInferenceConfig,
 } from '../../types';
 import {
   DEFAULT_NETWORK_CONFIG,
   DEFAULT_SECTOR_EXPANSION_CONFIG,
   DEFAULT_FACTION_WARFARE_CONFIG,
+  DEFAULT_DISTRIBUTED_INFERENCE_CONFIG,
 } from '../../types';
 import { createInitialFactionProgress } from '../../engine/faction-warfare';
 
@@ -57,6 +60,17 @@ class NetworkingState {
   activeDefusals: ManifestoDefusal[] = $state([]);
   /** Faction warfare configuration. */
   warfareConfig: FactionWarfareConfig = $state({ ...DEFAULT_FACTION_WARFARE_CONFIG });
+
+  // ── Distributed Inference (Epic 3.3) ─────────────────────────────────────
+
+  /** Configuration for distributed inference routing. */
+  distributedInferenceConfig: DistributedInferenceConfig = $state({ ...DEFAULT_DISTRIBUTED_INFERENCE_CONFIG });
+  /** Known peer GPU capabilities for load balancing. */
+  peerCapabilities: PeerCapability[] = $state([]);
+  /** Number of distributed inference requests currently in-flight. */
+  distributedActive: number = $state(0);
+  /** Number of distributed inference requests pending dispatch. */
+  distributedPending: number = $state(0);
 
   /** Update our own peer ID after network start. */
   setPeerId(id: string): void {
@@ -169,6 +183,24 @@ class NetworkingState {
     this.warfareConfig = { ...this.warfareConfig, ...partial };
   }
 
+  // ── Distributed Inference (Epic 3.3) ─────────────────────────────────────
+
+  /** Update the distributed inference configuration. */
+  updateDistributedInferenceConfig(partial: Partial<DistributedInferenceConfig>): void {
+    this.distributedInferenceConfig = { ...this.distributedInferenceConfig, ...partial };
+  }
+
+  /** Replace the known peer capabilities. */
+  setPeerCapabilities(capabilities: PeerCapability[]): void {
+    this.peerCapabilities = [...capabilities];
+  }
+
+  /** Update distributed inference HUD stats. */
+  updateDistributedStats(active: number, pending: number): void {
+    this.distributedActive = active;
+    this.distributedPending = pending;
+  }
+
   /** Reset all networking state (called on disconnect). */
   reset(): void {
     this.peerId = null;
@@ -182,6 +214,10 @@ class NetworkingState {
     this.factionProgress = createInitialFactionProgress();
     this.computeBoosts = [];
     this.activeDefusals = [];
+    this.distributedInferenceConfig = { ...DEFAULT_DISTRIBUTED_INFERENCE_CONFIG };
+    this.peerCapabilities = [];
+    this.distributedActive = 0;
+    this.distributedPending = 0;
     nextEventId = 0;
   }
 }

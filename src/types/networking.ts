@@ -174,7 +174,9 @@ export type NetworkEvent =
   | SectorRemovedEvent
   | AgentMigrationEvent
   | ComputeBoostEvent
-  | ManifestoDefusalEvent;
+  | ManifestoDefusalEvent
+  | InferenceRoutedEvent
+  | PeerCapacityEvent;
 
 interface BaseNetworkEvent {
   id: string;
@@ -292,3 +294,72 @@ export const DEFAULT_FACTION_WARFARE_CONFIG: FactionWarfareConfig = {
   computeBoostMultiplier: 1.5,
   defusalComputeThreshold: 100,
 };
+
+// ── Distributed Inference (Epic 3.3) ────────────────────────────────────────
+
+/** Inference request priority – standard thoughts vs critical simulation events. */
+export type InferencePriority = 'standard' | 'critical';
+
+/** Describes a peer's GPU capacity for inference load balancing. */
+export interface PeerCapability {
+  peerId: PeerId;
+  /** Total GPU VRAM available in megabytes. */
+  vramMb: number;
+  /** Number of model layers this peer is hosting in the distributed swarm. */
+  layersHosted: number;
+  /** Whether this peer is currently available for inference requests. */
+  available: boolean;
+}
+
+/** A typed inference request routed through the load balancer. */
+export interface InferenceRequest {
+  /** The agent this thought request belongs to. */
+  agentId: string;
+  /** The fully-built prompt string. */
+  prompt: string;
+  /** Request priority determines routing (standard → local, critical → God Mode). */
+  priority: InferencePriority;
+}
+
+/** Response wrapper from a completed inference request. */
+export interface InferenceResult {
+  /** PeerId that processed the request, or 'local' for local Ollama. */
+  processedBy: PeerId | 'local';
+  /** Raw generated text from the model. */
+  text: string;
+  /** Round-trip latency in milliseconds. */
+  latencyMs: number;
+}
+
+/** Configurable parameters for the distributed inference subsystem. */
+export interface DistributedInferenceConfig {
+  /** Model name for critical events (70B+ distributed via Petals). Empty = disabled. */
+  godModeModel: string;
+  /** Model name for standard agent thoughts (local 1B via Ollama). Empty = use BrainSettings model. */
+  standardModel: string;
+  /** Maximum concurrent distributed inference requests across all peers. */
+  maxDistributedConcurrency: number;
+  /** How often (ms) to poll peer capabilities. */
+  capacityPollIntervalMs: number;
+}
+
+export const DEFAULT_DISTRIBUTED_INFERENCE_CONFIG: DistributedInferenceConfig = {
+  godModeModel: '',
+  standardModel: '',
+  maxDistributedConcurrency: 4,
+  capacityPollIntervalMs: 5000,
+};
+
+export interface InferenceRoutedEvent extends BaseNetworkEvent {
+  type: 'inference_routed';
+  agentId: string;
+  targetPeerId: PeerId | 'local';
+  priority: InferencePriority;
+}
+
+export interface PeerCapacityEvent extends BaseNetworkEvent {
+  type: 'peer_capacity';
+  peerId: PeerId;
+  vramMb: number;
+  layersHosted: number;
+}

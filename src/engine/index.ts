@@ -63,3 +63,18 @@ export {
   resolveDefusal,
   checkContestedSector,
 } from './faction-warfare';
+
+// Epic 3.3 – Distributed Inference
+export {
+  connectToPetalsSwarm,
+  disconnectFromPetalsSwarm,
+  generateDistributed,
+  reportCapability,
+  getPeerCapabilities,
+} from './petals-client';
+export {
+  classifyInferenceRequest,
+  selectInferencePeer,
+  distributeRequests,
+  computePeerLoad,
+} from './inference-load-balancer';

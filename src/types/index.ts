@@ -65,10 +65,18 @@ export type {
   ComputeBoost,
   ManifestoDefusal,
   FactionWarfareConfig,
+  InferencePriority,
+  PeerCapability,
+  InferenceRequest,
+  InferenceResult,
+  DistributedInferenceConfig,
+  InferenceRoutedEvent,
+  PeerCapacityEvent,
 } from './networking';
 
 export {
   DEFAULT_NETWORK_CONFIG,
   DEFAULT_SECTOR_EXPANSION_CONFIG,
   DEFAULT_FACTION_WARFARE_CONFIG,
+  DEFAULT_DISTRIBUTED_INFERENCE_CONFIG,
 } from './networking';
