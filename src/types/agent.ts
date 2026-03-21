@@ -200,3 +200,63 @@ export interface Shockwave {
   /** Optional hex color override (default: 0xef4444). Manifesto bombs use 0xff2222. */
   color?: number;
 }
+
+// ── Epic 4.1 – Exportable DNA ─────────────────────────────────────────────────
+
+/** Current `.dna` file schema version. */
+export const DNA_FILE_VERSION = '1.0.0';
+
+/** Metadata envelope at the top of every `.dna` file. */
+export interface DnaFileHeader {
+  /** Schema version string (semver). */
+  version: string;
+  /** User-given name for this "cult" of agents. */
+  name: string;
+  /** Optional human-readable description. */
+  description: string;
+  /** ISO-8601 timestamp of when the file was created. */
+  createdAt: string;
+  /** Number of agents stored in this file. */
+  agentCount: number;
+}
+
+/**
+ * JSON-safe representation of an agent's DNA identity for export.
+ * Excludes runtime-only fields (position, velocity, energy, color, radius,
+ * activityLevel, deathFrame, adjacencyTicks, lastReproductionTick).
+ */
+export interface DnaFileAgent {
+  /** Original agent identifier (re-assigned on import). */
+  id: string;
+  /** Personality vector scored [0, 1]. */
+  vector: DNAVector;
+  /** Short-term lore-cache entries. */
+  loreCache: string[];
+  /** Culturally-evolved slang dictionary. */
+  lingo: Record<string, string>;
+  /** Faction classification. */
+  faction: Faction;
+  /** Parent agent IDs if born via reproduction, null otherwise. */
+  parentIds: [string, string] | null;
+  /** Long-term memory entries. */
+  memory: MemoryEntry[];
+}
+
+/** Top-level `.dna` file schema. */
+export interface DnaFile {
+  header: DnaFileHeader;
+  agents: DnaFileAgent[];
+}
+
+/** Options for importing a `.dna` file into the simulation. */
+export interface DnaImportOptions {
+  /** Center point where imported agents will spawn. */
+  spawnPosition: Vec2;
+  /** Maximum scatter distance (grid cells) from the spawn center. */
+  spreadRadius: number;
+}
+
+/** Discriminated result from `.dna` file validation. */
+export type DnaValidationResult =
+  | { valid: true; file: DnaFile }
+  | { valid: false; error: string };

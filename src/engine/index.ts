@@ -95,3 +95,12 @@ export {
 // Epic 4.0 – The Lingo-Gen
 export { buildLingoGenPrompt, extractThemes } from './lingo-gen-prompt';
 export { computeLingoLeaderboard } from './lingo-leaderboard';
+
+// Epic 4.1 – Exportable DNA
+export {
+  serializeAgentsToDnaFile,
+  validateDnaFile,
+  migrateDnaFile,
+  importDnaFileAgents,
+  resetImportIdCounter,
+} from './dna-exporter';

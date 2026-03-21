@@ -15,9 +15,14 @@ export type {
   DataBombType,
   Shockwave,
   MemoryEntry,
+  DnaFileHeader,
+  DnaFileAgent,
+  DnaFile,
+  DnaImportOptions,
+  DnaValidationResult,
 } from './agent';
 
-export { DEFAULT_CONFIG } from './agent';
+export { DEFAULT_CONFIG, DNA_FILE_VERSION } from './agent';
 
 export type { BrainSettings, OllamaStatus } from './brain';
 
