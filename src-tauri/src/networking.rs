@@ -100,10 +100,13 @@ pub async fn start_network(
     net.connected_peers.clear();
 
     // Emit a status event to the frontend
-    let _ = app.emit("network://status", serde_json::json!({
-        "status": "discovering",
-        "peerId": &peer_id,
-    }));
+    let _ = app.emit(
+        "network://status",
+        serde_json::json!({
+            "status": "discovering",
+            "peerId": &peer_id,
+        }),
+    );
 
     Ok(peer_id)
 }
@@ -127,9 +130,12 @@ pub async fn stop_network(
     net.role = "disconnected".to_string();
     net.sectors.clear();
 
-    let _ = app.emit("network://status", serde_json::json!({
-        "status": "offline",
-    }));
+    let _ = app.emit(
+        "network://status",
+        serde_json::json!({
+            "status": "offline",
+        }),
+    );
 
     Ok(())
 }
@@ -170,10 +176,13 @@ pub async fn host_sector(
 
     let peer_id = net.peer_id.clone().unwrap_or_default();
 
-    let _ = app.emit("network://sector-hosted", serde_json::json!({
-        "peerId": &peer_id,
-        "sectorId": &sector_id,
-    }));
+    let _ = app.emit(
+        "network://sector-hosted",
+        serde_json::json!({
+            "peerId": &peer_id,
+            "sectorId": &sector_id,
+        }),
+    );
 
     Ok(())
 }
@@ -199,9 +208,12 @@ pub async fn broadcast_state(
     }
 
     // In production this would go over GossipSub; for now emit locally
-    let _ = app.emit("network://state-update", serde_json::json!({
-        "diff": diff_json,
-    }));
+    let _ = app.emit(
+        "network://state-update",
+        serde_json::json!({
+            "diff": diff_json,
+        }),
+    );
 
     Ok(())
 }
@@ -226,10 +238,13 @@ pub async fn spawn_sector(
 
     net.sectors.insert(sector_id.clone(), entry);
 
-    let _ = app.emit("network://sector-spawned", serde_json::json!({
-        "sectorId": &sector_id,
-        "hostPeerId": &host_peer_id,
-    }));
+    let _ = app.emit(
+        "network://sector-spawned",
+        serde_json::json!({
+            "sectorId": &sector_id,
+            "hostPeerId": &host_peer_id,
+        }),
+    );
 
     Ok(())
 }
@@ -247,9 +262,12 @@ pub async fn remove_sector(
         return Err(format!("Sector '{}' not found", sector_id));
     }
 
-    let _ = app.emit("network://sector-removed", serde_json::json!({
-        "sectorId": &sector_id,
-    }));
+    let _ = app.emit(
+        "network://sector-removed",
+        serde_json::json!({
+            "sectorId": &sector_id,
+        }),
+    );
 
     Ok(())
 }

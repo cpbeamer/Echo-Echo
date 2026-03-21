@@ -51,9 +51,12 @@ pub async fn connect_petals_swarm(
 
     petals.is_connected = true;
 
-    let _ = app.emit("petals://status", serde_json::json!({
-        "status": "connected",
-    }));
+    let _ = app.emit(
+        "petals://status",
+        serde_json::json!({
+            "status": "connected",
+        }),
+    );
 
     Ok(true)
 }
@@ -70,9 +73,12 @@ pub async fn disconnect_petals_swarm(
     petals.local_capability = None;
     petals.peer_capabilities.clear();
 
-    let _ = app.emit("petals://status", serde_json::json!({
-        "status": "disconnected",
-    }));
+    let _ = app.emit(
+        "petals://status",
+        serde_json::json!({
+            "status": "disconnected",
+        }),
+    );
 
     Ok(())
 }

@@ -93,8 +93,21 @@ fn strip_html_tags(html: &str) -> String {
             // Insert a space where block-level tags were to preserve word boundaries
             if matches!(
                 tag_name,
-                "p" | "div" | "br" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "li" | "td"
-                    | "th" | "tr" | "blockquote" | "pre" | "hr"
+                "p" | "div"
+                    | "br"
+                    | "h1"
+                    | "h2"
+                    | "h3"
+                    | "h4"
+                    | "h5"
+                    | "h6"
+                    | "li"
+                    | "td"
+                    | "th"
+                    | "tr"
+                    | "blockquote"
+                    | "pre"
+                    | "hr"
             ) {
                 result.push(' ');
             }

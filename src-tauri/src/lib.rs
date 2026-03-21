@@ -11,7 +11,8 @@ use tokio::sync::Mutex;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(Arc::new(Mutex::new(networking::NetworkState::default())) as networking::SharedNetworkState)
+        .manage(Arc::new(Mutex::new(networking::NetworkState::default()))
+            as networking::SharedNetworkState)
         .manage(Arc::new(Mutex::new(petals::PetalsState::default())) as petals::SharedPetalsState)
         .invoke_handler(tauri::generate_handler![
             ollama::detect_ollama,
@@ -37,4 +38,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
