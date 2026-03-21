@@ -59,7 +59,7 @@ pub async fn fetch_url_text(url: String) -> Result<String, String> {
 /// then removes all remaining HTML tags and collapses whitespace.
 fn strip_html_tags(html: &str) -> String {
     let mut result = String::with_capacity(html.len());
-    let mut chars = html.chars().peekable();
+    let chars = html.chars().peekable();
     let mut in_tag = false;
     let mut in_script = false;
     let mut in_style = false;
