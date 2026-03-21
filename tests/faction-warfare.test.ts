@@ -65,10 +65,7 @@ describe('computeFactionProgress', () => {
   });
 
   it('excludes dead and unaligned agents', () => {
-    const agents = [
-      createFactionAgent(10, 10, 'hive'),
-      createFactionAgent(20, 20, 'unaligned'),
-    ];
+    const agents = [createFactionAgent(10, 10, 'hive'), createFactionAgent(20, 20, 'unaligned')];
     // Kill the first agent
     agents[0].energy = 0;
 
@@ -95,9 +92,7 @@ describe('computeFactionProgress', () => {
 
   it('includes compute boost bonus in progress', () => {
     const agents = [createFactionAgent(10, 10, 'hive')];
-    const boosts: ComputeBoost[] = [
-      { peerId: 'peer-1', faction: 'hive', computeUnits: 10 },
-    ];
+    const boosts: ComputeBoost[] = [{ peerId: 'peer-1', faction: 'hive', computeUnits: 10 }];
 
     const current = createInitialFactionProgress();
     const updated = computeFactionProgress(agents, current, boosts);
@@ -137,9 +132,7 @@ describe('applyComputeBoost', () => {
   });
 
   it('uses custom config multiplier', () => {
-    const boosts: ComputeBoost[] = [
-      { peerId: 'peer-1', faction: 'citadel', computeUnits: 100 },
-    ];
+    const boosts: ComputeBoost[] = [{ peerId: 'peer-1', faction: 'citadel', computeUnits: 100 }];
 
     const priorityMap = applyComputeBoost(boosts, {
       ...DEFAULT_FACTION_WARFARE_CONFIG,

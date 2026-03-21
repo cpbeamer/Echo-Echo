@@ -2,7 +2,13 @@
  * Synaptic Sandbox – Shared Game Logic Engine
  */
 
-export { createAgent, createAgents, createChildAgent, dnaToColor, resetAgentIdCounter } from './agent-factory';
+export {
+  createAgent,
+  createAgents,
+  createChildAgent,
+  dnaToColor,
+  resetAgentIdCounter,
+} from './agent-factory';
 export { classifyFaction, areOpposingFactions, FACTION_META } from './factions';
 export { mutateAgentFromText, applyDNAUpdate } from './dna-mutation';
 export { attemptMemeSwap, ideologicalSimilarity, processMemeSwaps } from './meme-swap';
@@ -18,13 +24,23 @@ export { ThoughtOrchestrator } from './thought-orchestrator';
 export { buildMutationPrompt } from './prompt-builder';
 
 // Epic 1.4 – Data Bombs
-export { findAgentsInBlastRadius, detonateDataBomb, detonateAmnesiaBomb, manhattanDistance } from './blast-radius';
+export {
+  findAgentsInBlastRadius,
+  detonateDataBomb,
+  detonateAmnesiaBomb,
+  manhattanDistance,
+} from './blast-radius';
 
 // Epic 1.5 – HUD & Observation
 export { clusterAgents, extractLingoCloud, computeLingoClusters } from './lingo-cloud';
 
 // Epic 2.1 – Agent Life Cycle
-export { tickEnergy, updateAdjacencyTicks, tickReproduction, applyNaturalSelection } from './lifecycle';
+export {
+  tickEnergy,
+  updateAdjacencyTicks,
+  tickReproduction,
+  applyNaturalSelection,
+} from './lifecycle';
 
 // Epic 2.2 – Persistent Memory
 export { addMemory, retrieveRelevantMemories, clearMemory, extractKeywords } from './memory-store';
@@ -48,11 +64,7 @@ export { SectorVisitor } from './sector-visitor';
 
 // Epic 3.1 – Sector Expansion
 export { SectorManager } from './sector-manager';
-export {
-  detectMigrationCandidates,
-  migrateAgent,
-  receiveMigratedAgent,
-} from './agent-migration';
+export { detectMigrationCandidates, migrateAgent, receiveMigratedAgent } from './agent-migration';
 
 // Epic 3.2 – Faction Warfare
 export {

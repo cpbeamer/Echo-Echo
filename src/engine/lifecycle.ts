@@ -93,8 +93,7 @@ export function updateAdjacencyTicks(agents: Agent[]): void {
         continue;
       }
 
-      const pairKey =
-        agent.id < otherId ? `${agent.id}:${otherId}` : `${otherId}:${agent.id}`;
+      const pairKey = agent.id < otherId ? `${agent.id}:${otherId}` : `${otherId}:${agent.id}`;
 
       if (!currentlyAdjacent.has(pairKey)) {
         toDelete.push(otherId);
@@ -118,11 +117,7 @@ export function updateAdjacencyTicks(agents: Agent[]): void {
  *
  * Returns an array of newly spawned child agents.
  */
-export function tickReproduction(
-  agents: Agent[],
-  tick: number,
-  config: SimulationConfig,
-): Agent[] {
+export function tickReproduction(agents: Agent[], tick: number, config: SimulationConfig): Agent[] {
   const newborns: Agent[] = [];
   const aliveAgents = agents.filter((a) => a.energy > 0 && a.deathFrame === null);
 

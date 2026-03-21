@@ -13,9 +13,9 @@ describe('computeLingoLeaderboard', () => {
     const b = createAgent(6, 6);
     const c = createAgent(7, 7);
 
-    a.lingo = { 'Sec-Jedi': 'A leader', 'common': 'shared' };
-    b.lingo = { 'Void-Born': 'A nihilist', 'common': 'shared' };
-    c.lingo = { 'common': 'shared', 'rare': 'unique', 'Void-Born': 'loner' };
+    a.lingo = { 'Sec-Jedi': 'A leader', common: 'shared' };
+    b.lingo = { 'Void-Born': 'A nihilist', common: 'shared' };
+    c.lingo = { common: 'shared', rare: 'unique', 'Void-Born': 'loner' };
 
     const leaderboard = computeLingoLeaderboard([a, b, c]);
 
@@ -27,7 +27,7 @@ describe('computeLingoLeaderboard', () => {
 
   it('respects the topN limit', () => {
     const a = createAgent(5, 5);
-    a.lingo = { 'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5' };
+    a.lingo = { a: '1', b: '2', c: '3', d: '4', e: '5' };
 
     const leaderboard = computeLingoLeaderboard([a], [], 3);
 
@@ -51,7 +51,7 @@ describe('computeLingoLeaderboard', () => {
 
   it('detects trend "up" for new terms not in previous leaderboard', () => {
     const a = createAgent(5, 5);
-    a.lingo = { 'NewTerm': 'brand new' };
+    a.lingo = { NewTerm: 'brand new' };
 
     const leaderboard = computeLingoLeaderboard([a], []);
 
@@ -61,8 +61,8 @@ describe('computeLingoLeaderboard', () => {
   it('detects trend "stable" when term stays at same rank', () => {
     const a = createAgent(5, 5);
     const b = createAgent(6, 6);
-    a.lingo = { 'Alpha': 'first' };
-    b.lingo = { 'Alpha': 'first' };
+    a.lingo = { Alpha: 'first' };
+    b.lingo = { Alpha: 'first' };
 
     const previous: LingoLeaderboardEntry[] = [
       { term: 'Alpha', meaning: 'first', count: 1, trend: 'up' },
@@ -79,9 +79,9 @@ describe('computeLingoLeaderboard', () => {
     const b = createAgent(6, 6);
     const c = createAgent(7, 7);
 
-    a.lingo = { 'Alpha': 'first', 'Beta': 'second' };
-    b.lingo = { 'Beta': 'second' };
-    c.lingo = { 'Beta': 'second' };
+    a.lingo = { Alpha: 'first', Beta: 'second' };
+    b.lingo = { Beta: 'second' };
+    c.lingo = { Beta: 'second' };
 
     // Alpha was #0 previously, now Beta is #0 and Alpha is #1
     const previous: LingoLeaderboardEntry[] = [
@@ -102,8 +102,8 @@ describe('computeLingoLeaderboard', () => {
     const a = createAgent(5, 5);
     const b = createAgent(6, 6);
 
-    a.lingo = { 'Shared': 'meaning-a' };
-    b.lingo = { 'Shared': 'meaning-b' };
+    a.lingo = { Shared: 'meaning-a' };
+    b.lingo = { Shared: 'meaning-b' };
 
     const leaderboard = computeLingoLeaderboard([a, b]);
 

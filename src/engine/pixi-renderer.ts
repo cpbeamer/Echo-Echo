@@ -6,14 +6,7 @@
  * The Svelte component is a thin wrapper that syncs reactive state into this class.
  */
 
-import {
-  Application,
-  Container,
-  Graphics,
-  Text,
-  TextStyle,
-  type ColorSource,
-} from 'pixi.js';
+import { Application, Container, Graphics, Text, TextStyle, type ColorSource } from 'pixi.js';
 import type { Agent, Shockwave, LingoSwapBubble } from '../types';
 import { FACTION_META } from './factions';
 
@@ -90,7 +83,12 @@ export class PixiRenderer {
    * Initialize the PixiJS Application and attach it to the given container element.
    * Uses WebGPU with WebGL2 fallback.
    */
-  async init(container: HTMLElement, gridWidth: number, gridHeight: number, sectorSize: number): Promise<void> {
+  async init(
+    container: HTMLElement,
+    gridWidth: number,
+    gridHeight: number,
+    sectorSize: number,
+  ): Promise<void> {
     this.gridWidth = gridWidth;
     this.gridHeight = gridHeight;
     this.sectorSize = sectorSize;
@@ -309,8 +307,8 @@ export class PixiRenderer {
       const textScale = 1 / 8;
 
       // Measure pill dimensions from unscaled label size, then apply scale
-      const pillW = (label.width * textScale) + 0.4;
-      const pillH = (label.height * textScale) + 0.2;
+      const pillW = label.width * textScale + 0.4;
+      const pillH = label.height * textScale + 0.2;
 
       label.scale.set(textScale, textScale);
       label.anchor.set(0.5, 0.5);
@@ -361,7 +359,7 @@ export class PixiRenderer {
       node.root.position.set(x, y - arc);
 
       // Fade out toward the end
-      node.root.alpha = progress < 0.7 ? 1 : 1 - ((progress - 0.7) / 0.3);
+      node.root.alpha = progress < 0.7 ? 1 : 1 - (progress - 0.7) / 0.3;
     }
   }
 
@@ -409,16 +407,12 @@ export class PixiRenderer {
 
     // Selection ring — white stroke, hidden by default
     const selectionRing = new Graphics();
-    selectionRing
-      .circle(0, 0, agent.radius * 1.4)
-      .stroke({ color: 0xffffff, width: 0.15 });
+    selectionRing.circle(0, 0, agent.radius * 1.4).stroke({ color: 0xffffff, width: 0.15 });
     selectionRing.visible = false;
 
     // Highlight ring — red stroke, hidden by default
     const highlightRing = new Graphics();
-    highlightRing
-      .circle(0, 0, agent.radius * 1.4)
-      .stroke({ color: 0xef4444, width: 0.12 });
+    highlightRing.circle(0, 0, agent.radius * 1.4).stroke({ color: 0xef4444, width: 0.12 });
     highlightRing.visible = false;
 
     root.addChild(glow, body, selectionRing, highlightRing);
@@ -479,17 +473,13 @@ export class PixiRenderer {
   private drawGlow(glow: Graphics, agent: Agent): void {
     const factionMeta = FACTION_META[agent.faction];
     const glowColor = this.parseColor(factionMeta.glowColor);
-    glow
-      .circle(0, 0, agent.radius * 2.5)
-      .fill({ color: glowColor, alpha: 0.25 });
+    glow.circle(0, 0, agent.radius * 2.5).fill({ color: glowColor, alpha: 0.25 });
   }
 
   /** Draw the body circle graphic for an agent. */
   private drawBody(body: Graphics, agent: Agent): void {
     const color = this.hslToHex(agent.color);
-    body
-      .circle(0, 0, agent.radius)
-      .fill(color);
+    body.circle(0, 0, agent.radius).fill(color);
   }
 
   /** Draw the crosshair overlay in screen space. */

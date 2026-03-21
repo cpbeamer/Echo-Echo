@@ -40,9 +40,9 @@ vi.mock('../src/engine/petals-client', () => ({
 
 // Mock the context-truncator to passthrough
 vi.mock('../src/engine/context-truncator', () => ({
-  truncateLoreCache: vi.fn().mockImplementation((loreCache: string[]) =>
-    Promise.resolve(loreCache),
-  ),
+  truncateLoreCache: vi
+    .fn()
+    .mockImplementation((loreCache: string[]) => Promise.resolve(loreCache)),
 }));
 
 const TEST_SETTINGS: BrainSettings = {
@@ -85,10 +85,7 @@ describe('classifyInferenceRequest', () => {
 
 describe('selectInferencePeer', () => {
   it('returns local when no peers have capacity', () => {
-    const result = selectInferencePeer(
-      { agentId: 'a', prompt: 'p', priority: 'standard' },
-      [],
-    );
+    const result = selectInferencePeer({ agentId: 'a', prompt: 'p', priority: 'standard' }, []);
 
     expect(result).toBe('local');
   });

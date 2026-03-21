@@ -107,9 +107,7 @@ export class SectorManager {
   autoAssignHost(peers: PeerInfo[]): PeerInfo | null {
     if (peers.length === 0) return null;
 
-    const currentHostIds = new Set(
-      this.getAllSectors().map((s) => s.hostPeerId),
-    );
+    const currentHostIds = new Set(this.getAllSectors().map((s) => s.hostPeerId));
 
     // Prefer peers that aren't already hosting a sector
     const nonHostPeers = peers.filter((p) => !currentHostIds.has(p.peerId));

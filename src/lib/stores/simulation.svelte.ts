@@ -6,8 +6,19 @@
  * and the currently selected agent.
  */
 
-import type { Agent, DataBomb, DataBombRecord, SimulationConfig, Shockwave, Faction, LingoSwapBubble, LingoLeaderboardEntry, MemeSwapResult } from '../../types';
+import type {
+  Agent,
+  DataBomb,
+  DataBombRecord,
+  SimulationConfig,
+  Shockwave,
+  Faction,
+  LingoSwapBubble,
+  LingoLeaderboardEntry,
+  MemeSwapResult,
+} from '../../types';
 import { DEFAULT_CONFIG } from '../../types';
+import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 import { createAgents } from '../../engine/agent-factory';
 import { tickPhysics } from '../../engine/physics';
 import { processMemeSwaps } from '../../engine/meme-swap';
@@ -90,7 +101,7 @@ class SimulationState {
   isPickingTarget: boolean = $state(false);
 
   /** Agent IDs currently highlighted (e.g. from history hover). */
-  highlightedAgentIds: Set<string> = $state(new Set());
+  highlightedAgentIds: SvelteSet<string> = $state(new SvelteSet());
 
   /** Active lingo swap bubble animations rendered on the canvas. */
   activeLingoSwaps: LingoSwapBubble[] = $state([]);
@@ -150,7 +161,7 @@ class SimulationState {
     this.orchestrator.clearQueue();
     this.dataBombHistory = [];
     this.activeShockwaves = [];
-    this.highlightedAgentIds = new Set();
+    this.highlightedAgentIds = new SvelteSet();
     this.populationHistory = [];
     this.birthsSinceSnapshot = 0;
     this.deathsSinceSnapshot = 0;
@@ -227,9 +238,7 @@ class SimulationState {
       ? bomb.radius * this.config.manifestoRadiusMultiplier
       : bomb.radius;
 
-    const effectiveDelta = isManifesto
-      ? 0.05 * this.config.manifestoDeltaMultiplier
-      : undefined;
+    const effectiveDelta = isManifesto ? 0.05 * this.config.manifestoDeltaMultiplier : undefined;
 
     const effectiveBomb: DataBomb = { ...bomb, radius: effectiveRadius };
 
@@ -247,9 +256,7 @@ class SimulationState {
       timestamp: Date.now(),
       affectedAgentIds: affectedIds,
       contentPreview:
-        bombType === 'amnesia'
-          ? '[Amnesia Bomb]'
-          : bomb.text.slice(0, 80).replace(/\n/g, ' '),
+        bombType === 'amnesia' ? '[Amnesia Bomb]' : bomb.text.slice(0, 80).replace(/\n/g, ' '),
     };
 
     // Newest first
@@ -309,12 +316,12 @@ class SimulationState {
 
   /** Highlight agents from a specific data bomb record. */
   highlightBombAgents(agentIds: string[]): void {
-    this.highlightedAgentIds = new Set(agentIds);
+    this.highlightedAgentIds = new SvelteSet(agentIds);
   }
 
   /** Clear any agent highlights. */
   clearHighlights(): void {
-    this.highlightedAgentIds = new Set();
+    this.highlightedAgentIds = new SvelteSet();
   }
 
   /**
@@ -371,7 +378,7 @@ class SimulationState {
     this.orchestrator.updateSettings(brainSettings.settings);
 
     // Track agents killed by conflict this tick for accurate death-cause attribution
-    const conflictKilledIds = new Set<string>();
+    const conflictKilledIds = new SvelteSet<string>();
 
     // Physics
     tickPhysics(this.agents, 1, this.config);
@@ -430,7 +437,10 @@ class SimulationState {
         newsfeed.push({
           type: 'conflict',
           message: `⚔️ Conflict between ${conflict.dominant.length + conflict.submissive.length} agents`,
-          agentIds: [...conflict.dominant.map((a) => a.id), ...conflict.submissive.map((a) => a.id)],
+          agentIds: [
+            ...conflict.dominant.map((a) => a.id),
+            ...conflict.submissive.map((a) => a.id),
+          ],
         });
       }
     }
@@ -531,10 +541,7 @@ class SimulationState {
 
     // Lingo leaderboard recomputation (Epic 4.0)
     if (this.tick % LEADERBOARD_INTERVAL === 0) {
-      this.lingoLeaderboard = computeLingoLeaderboard(
-        this.aliveAgents,
-        this.lingoLeaderboard,
-      );
+      this.lingoLeaderboard = computeLingoLeaderboard(this.aliveAgents, this.lingoLeaderboard);
     }
 
     this.tick++;
@@ -546,7 +553,7 @@ class SimulationState {
    */
   private spawnLingoBubbles(results: MemeSwapResult[]): void {
     // Build a quick lookup for agent positions
-    const positionById = new Map<string, { x: number; y: number }>();
+    const positionById = new SvelteMap<string, { x: number; y: number }>();
     for (const agent of this.agents) {
       positionById.set(agent.id, { x: agent.position.x, y: agent.position.y });
     }

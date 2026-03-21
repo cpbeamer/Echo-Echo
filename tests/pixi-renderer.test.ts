@@ -13,13 +13,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('pixi.js', () => {
   class MockGraphics {
     visible = true;
-    clear() { return this; }
-    circle() { return this; }
-    rect() { return this; }
-    fill() { return this; }
-    stroke() { return this; }
-    moveTo() { return this; }
-    lineTo() { return this; }
+    clear() {
+      return this;
+    }
+    circle() {
+      return this;
+    }
+    rect() {
+      return this;
+    }
+    fill() {
+      return this;
+    }
+    stroke() {
+      return this;
+    }
+    moveTo() {
+      return this;
+    }
+    lineTo() {
+      return this;
+    }
     destroy() {}
   }
 
@@ -30,13 +44,19 @@ vi.mock('pixi.js', () => {
     alpha = 1;
     rotation = 0;
     visible = true;
-    addChild(...items: unknown[]) { this.children.push(...items); }
-    addChildAt(item: unknown, index: number) { this.children.splice(index, 0, item); }
+    addChild(...items: unknown[]) {
+      this.children.push(...items);
+    }
+    addChildAt(item: unknown, index: number) {
+      this.children.splice(index, 0, item);
+    }
     removeChild(item: unknown) {
       const idx = this.children.indexOf(item);
       if (idx >= 0) this.children.splice(idx, 1);
     }
-    destroy() { this.children = []; }
+    destroy() {
+      this.children = [];
+    }
   }
 
   class MockApplication {

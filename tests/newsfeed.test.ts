@@ -84,7 +84,13 @@ describe('Newsfeed Store Logic', () => {
   it('handles all event types without error', () => {
     feed.push({ type: 'meme_swap', message: 'Swap', swapCount: 3 });
     feed.push({ type: 'conflict', message: 'Fight', agentIds: ['a1', 'a2'] });
-    feed.push({ type: 'faction_change', message: 'Changed', agentId: 'a1', fromFaction: 'hive', toFaction: 'void' });
+    feed.push({
+      type: 'faction_change',
+      message: 'Changed',
+      agentId: 'a1',
+      fromFaction: 'hive',
+      toFaction: 'void',
+    });
     feed.push({ type: 'data_bomb', message: 'Boom', affectedCount: 10, target: { x: 50, y: 50 } });
     feed.push({ type: 'agent_death', message: 'Dead', agentId: 'a3', cause: 'starvation' });
 

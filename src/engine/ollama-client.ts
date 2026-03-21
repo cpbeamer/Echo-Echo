@@ -29,10 +29,7 @@ export async function listModels(): Promise<string[]> {
  * Send a prompt to Ollama and return the generated text.
  * Returns `null` if the request fails for any reason.
  */
-export async function generateCompletion(
-  model: string,
-  prompt: string,
-): Promise<string | null> {
+export async function generateCompletion(model: string, prompt: string): Promise<string | null> {
   try {
     return await invoke<string>('generate_completion', { model, prompt });
   } catch (error) {

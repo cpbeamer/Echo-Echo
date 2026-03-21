@@ -63,11 +63,7 @@ export function deserializeAgent(data: SerializedAgent): Agent {
  * - Agents present in `prev` but not `curr` → removed
  * - Agents present in both → only changed fields are included
  */
-export function computeStateDiff(
-  prev: Agent[],
-  curr: Agent[],
-  tick: number,
-): StateDiff {
+export function computeStateDiff(prev: Agent[], curr: Agent[], tick: number): StateDiff {
   const prevMap = new Map(prev.map((a) => [a.id, a]));
   const currMap = new Map(curr.map((a) => [a.id, a]));
 

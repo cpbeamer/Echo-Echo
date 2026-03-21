@@ -6,7 +6,6 @@ import {
   applyStateDiff,
 } from '../src/engine/state-sync';
 import { createAgent, resetAgentIdCounter } from '../src/engine/agent-factory';
-import type { Agent } from '../src/types';
 
 describe('serializeAgent / deserializeAgent', () => {
   beforeEach(() => {
@@ -151,8 +150,8 @@ describe('computeStateDiff', () => {
     const prev = [createAgent(10, 10)];
     resetAgentIdCounter();
     const curr = [createAgent(10, 10)];
-    // Ensure faction differs by choosing one that's guaranteed to be different
-    const newFaction = curr[0].faction === 'void' ? 'hive' : 'void';
+    // Ensure faction differs from prev by choosing one guaranteed to be different
+    const newFaction = prev[0].faction === 'void' ? 'hive' : 'void';
     curr[0].faction = newFaction;
 
     const diff = computeStateDiff(prev, curr, 1);

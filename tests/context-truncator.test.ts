@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { estimateTokens, estimateLoreCacheTokens, truncateLoreCache } from '../src/engine/context-truncator';
+import {
+  estimateTokens,
+  estimateLoreCacheTokens,
+  truncateLoreCache,
+} from '../src/engine/context-truncator';
 
 // Mock the ollama-client at the top level so the static import inside
 // context-truncator.ts picks up the mock.
@@ -47,8 +51,10 @@ describe('Context Truncator – truncateLoreCache', () => {
     vi.mocked(generateCompletion).mockResolvedValue('Condensed memory summary.');
 
     // Create a lore-cache that exceeds a tight budget (20 tokens ≈ 80 chars)
-    const longLore = Array.from({ length: 10 }, (_, i) =>
-      `This is a fairly long lore entry number ${i} with lots of detail about what happened.`,
+    const longLore = Array.from(
+      { length: 10 },
+      (_, i) =>
+        `This is a fairly long lore entry number ${i} with lots of detail about what happened.`,
     );
 
     const result = await truncateLoreCache(longLore, 20, 'llama3.2:1b');
@@ -63,8 +69,9 @@ describe('Context Truncator – truncateLoreCache', () => {
     const { generateCompletion } = await import('../src/engine/ollama-client');
     vi.mocked(generateCompletion).mockResolvedValue(null as unknown as string);
 
-    const longLore = Array.from({ length: 10 }, (_, i) =>
-      `Long entry ${i} with substantial content padding to exceed the budget.`,
+    const longLore = Array.from(
+      { length: 10 },
+      (_, i) => `Long entry ${i} with substantial content padding to exceed the budget.`,
     );
 
     const result = await truncateLoreCache(longLore, 20, 'llama3.2:1b');

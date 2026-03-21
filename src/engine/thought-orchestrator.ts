@@ -21,7 +21,11 @@ import { applyDNAUpdate } from './dna-mutation';
 import { truncateLoreCache } from './context-truncator';
 import { retrieveRelevantMemories } from './memory-store';
 import { buildMutationPrompt } from './prompt-builder';
-import { classifyInferenceRequest, selectInferencePeer, computePeerLoad } from './inference-load-balancer';
+import {
+  classifyInferenceRequest,
+  selectInferencePeer,
+  computePeerLoad,
+} from './inference-load-balancer';
 
 /** A pending thought request in the queue. */
 interface ThoughtRequest {
@@ -209,9 +213,10 @@ export class ThoughtOrchestrator {
       }
     }
 
-    const model = priority === 'critical'
-      ? this.distributedConfig.godModeModel
-      : (this.distributedConfig.standardModel || this.settings.ollamaModel);
+    const model =
+      priority === 'critical'
+        ? this.distributedConfig.godModeModel
+        : this.distributedConfig.standardModel || this.settings.ollamaModel;
 
     this.distributedActiveCount++;
     this.peerActiveRequests.set(targetPeer, (this.peerActiveRequests.get(targetPeer) ?? 0) + 1);
@@ -229,10 +234,8 @@ export class ThoughtOrchestrator {
     }
   }
 
-
   /** Clear all pending requests. */
   clearQueue(): void {
     this.queue = [];
   }
 }
-

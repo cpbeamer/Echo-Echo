@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  detonateAmnesiaBomb,
-  findAgentsInBlastRadius,
-} from '../src/engine/blast-radius';
+import { detonateAmnesiaBomb } from '../src/engine/blast-radius';
 import { addMemory } from '../src/engine/memory-store';
 import { createAgent, resetAgentIdCounter } from '../src/engine/agent-factory';
 import type { DataBomb } from '../src/types';

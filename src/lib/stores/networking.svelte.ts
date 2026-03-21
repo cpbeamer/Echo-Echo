@@ -64,7 +64,9 @@ class NetworkingState {
   // ── Distributed Inference (Epic 3.3) ─────────────────────────────────────
 
   /** Configuration for distributed inference routing. */
-  distributedInferenceConfig: DistributedInferenceConfig = $state({ ...DEFAULT_DISTRIBUTED_INFERENCE_CONFIG });
+  distributedInferenceConfig: DistributedInferenceConfig = $state({
+    ...DEFAULT_DISTRIBUTED_INFERENCE_CONFIG,
+  });
   /** Known peer GPU capabilities for load balancing. */
   peerCapabilities: PeerCapability[] = $state([]);
   /** Number of distributed inference requests currently in-flight. */
@@ -150,10 +152,7 @@ class NetworkingState {
   /** Register a new compute boost from a peer. */
   addComputeBoost(boost: ComputeBoost): void {
     // Replace any existing boost from the same peer
-    this.computeBoosts = [
-      ...this.computeBoosts.filter((b) => b.peerId !== boost.peerId),
-      boost,
-    ];
+    this.computeBoosts = [...this.computeBoosts.filter((b) => b.peerId !== boost.peerId), boost];
   }
 
   /** Remove a peer's compute boost (e.g., on disconnect). */
@@ -223,4 +222,3 @@ class NetworkingState {
 }
 
 export const networking = new NetworkingState();
-

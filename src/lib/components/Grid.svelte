@@ -165,8 +165,7 @@
   role="application"
   aria-label="Simulation grid"
   tabindex="0"
->
-</div>
+></div>
 
 <style>
   .grid-container {

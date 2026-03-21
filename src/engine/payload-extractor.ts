@@ -35,9 +35,8 @@ export async function fetchUrlText(url: string): Promise<string> {
   try {
     return await invoke<string>('fetch_url_text', { url });
   } catch (error) {
-    throw new Error(
-      `URL fetch failed: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
+    throw new Error(`URL fetch failed: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
   }
 }

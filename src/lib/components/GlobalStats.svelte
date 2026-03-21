@@ -65,7 +65,9 @@
     <svg width="28" height="28" viewBox="0 0 28 28" class="pie-chart">
       {#each slices as slice (slice.faction)}
         <path d={slice.path} fill={slice.color} stroke="var(--bg-secondary)" stroke-width="0.5">
-          <title>{FACTION_META[slice.faction as Faction]?.label ?? slice.faction}: {slice.count}</title>
+          <title
+            >{FACTION_META[slice.faction as Faction]?.label ?? slice.faction}: {slice.count}</title
+          >
         </path>
       {/each}
       {#if slices.length === 0}
@@ -78,10 +80,7 @@
   <div class="stat-item peace-stat">
     <span class="stat-label">Peace</span>
     <div class="peace-bar-container">
-      <div
-        class="peace-bar-fill"
-        style="width: {peacePercent()}%;"
-      ></div>
+      <div class="peace-bar-fill" style="width: {peacePercent()}%;"></div>
     </div>
     <span class="stat-value peace-value">{peacePercent()}%</span>
   </div>

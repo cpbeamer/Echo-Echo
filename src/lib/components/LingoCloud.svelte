@@ -18,7 +18,11 @@
     if (now - lastUpdate < 500) return;
     lastUpdate = now;
 
-    clusters = computeLingoClusters(_agents.filter((a) => a.energy > 0), 10, 10);
+    clusters = computeLingoClusters(
+      _agents.filter((a) => a.energy > 0),
+      10,
+      10,
+    );
   });
 
   /** Convert grid coords to screen pixel coords using the camera transform. */
@@ -42,14 +46,12 @@
     {#if cluster.terms.length > 0}
       {@const pos = gridToScreen(cluster.centroid.x, cluster.centroid.y)}
       {@const maxCount = cluster.terms[0].count}
-      <div
-        class="lingo-cloud"
-        style="left: {pos.sx}px; top: {pos.sy - 20}px;"
-      >
+      <div class="lingo-cloud" style="left: {pos.sx}px; top: {pos.sy - 20}px;">
         {#each cluster.terms.slice(0, 8) as term (term.term)}
           <span
             class="lingo-term"
-            style="font-size: {fontSize(term.count, maxCount)}px; opacity: {0.5 + (term.count / maxCount) * 0.5};"
+            style="font-size: {fontSize(term.count, maxCount)}px; opacity: {0.5 +
+              (term.count / maxCount) * 0.5};"
           >
             {term.term}
           </span>

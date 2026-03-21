@@ -38,7 +38,7 @@
   function handleDrop() {
     if (!canDrop() || !pickedTarget) return;
 
-    let text = '';
+    let text: string;
     switch (bombType) {
       case 'amnesia':
         text = '';
@@ -134,10 +134,7 @@
   }
 
   /** Visual config per bomb type for the modal header and buttons. */
-  const BOMB_META: Record<
-    DataBombType,
-    { emoji: string; label: string; headerLabel: string }
-  > = {
+  const BOMB_META: Record<DataBombType, { emoji: string; label: string; headerLabel: string }> = {
     standard: { emoji: '💣', label: 'Standard', headerLabel: '💣 Drop Data Bomb' },
     amnesia: { emoji: '🧹', label: 'Amnesia', headerLabel: '🧹 Drop Amnesia Bomb' },
     pdf: { emoji: '📄', label: 'PDF', headerLabel: '📄 Drop PDF Bomb' },
@@ -162,7 +159,7 @@
       <!-- Bomb Type Selector -->
       <label class="field-label">Bomb Type</label>
       <div class="type-selector">
-        {#each (['standard', 'amnesia', 'pdf', 'url', 'manifesto'] as DataBombType[]) as t (t)}
+        {#each ['standard', 'amnesia', 'pdf', 'url', 'manifesto'] as DataBombType[] as t (t)}
           <button
             class="type-btn"
             class:active={bombType === t}
@@ -170,7 +167,8 @@
             class:manifesto={t === 'manifesto'}
             onclick={() => (bombType = t)}
           >
-            {BOMB_META[t].emoji} {BOMB_META[t].label}
+            {BOMB_META[t].emoji}
+            {BOMB_META[t].label}
           </button>
         {/each}
       </div>
@@ -195,14 +193,17 @@
           rows="6"
         ></textarea>
 
-      <!-- Amnesia info -->
+        <!-- Amnesia info -->
       {:else if bombType === 'amnesia'}
         <div class="amnesia-info">
           <span class="amnesia-icon">🧠</span>
-          <p>Wipes all <strong>memories</strong>, <strong>lore-cache</strong>, and <strong>lingo</strong> from agents in the blast radius.</p>
+          <p>
+            Wipes all <strong>memories</strong>, <strong>lore-cache</strong>, and
+            <strong>lingo</strong> from agents in the blast radius.
+          </p>
         </div>
 
-      <!-- PDF file picker -->
+        <!-- PDF file picker -->
       {:else if bombType === 'pdf'}
         <label class="field-label" for="pdf-file">PDF File</label>
         <div class="file-picker">
@@ -230,7 +231,7 @@
           </div>
         {/if}
 
-      <!-- URL input -->
+        <!-- URL input -->
       {:else if bombType === 'url'}
         <label class="field-label" for="url-input">URL</label>
         <div class="url-row">
@@ -242,7 +243,11 @@
             placeholder="https://example.com/article"
             onkeydown={handleUrlKeydown}
           />
-          <button class="fetch-btn" onclick={handleUrlFetch} disabled={urlLoading || !urlInput.trim()}>
+          <button
+            class="fetch-btn"
+            onclick={handleUrlFetch}
+            disabled={urlLoading || !urlInput.trim()}
+          >
             {urlLoading ? '…' : 'Fetch'}
           </button>
         </div>

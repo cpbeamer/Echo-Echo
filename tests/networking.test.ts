@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { SectorHost, serializeFullState } from '../src/engine/sector-host';
 import { SectorVisitor } from '../src/engine/sector-visitor';
 import { createAgent, resetAgentIdCounter } from '../src/engine/agent-factory';
-import { serializeAgent, deserializeAgent } from '../src/engine/state-sync';
+// state-sync utilities are used transitively via SectorHost/SectorVisitor
 
 describe('SectorHost', () => {
   beforeEach(() => {

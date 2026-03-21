@@ -59,14 +59,14 @@
     sectors: SectorInfo[],
   ): { x1: number; y1: number; x2: number; y2: number }[] {
     const edges: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    const seen = new Set<string>();
+    const seen: Record<string, true> = {};
 
     for (const sector of sectors) {
       const from = sectorCenter(sector);
       for (const adjId of sector.adjacentSectorIds) {
         const key = [sector.sectorId, adjId].sort().join('::');
-        if (seen.has(key)) continue;
-        seen.add(key);
+        if (seen[key]) continue;
+        seen[key] = true;
 
         const adj = sectors.find((s) => s.sectorId === adjId);
         if (!adj) continue;
@@ -100,14 +100,8 @@
       preserveAspectRatio="xMidYMid meet"
     >
       <!-- Adjacency edges -->
-      {#each edges as edge}
-        <line
-          x1={edge.x1}
-          y1={edge.y1}
-          x2={edge.x2}
-          y2={edge.y2}
-          class="edge-line"
-        />
+      {#each edges as edge (`${edge.x1},${edge.y1}-${edge.x2},${edge.y2}`)}
+        <line x1={edge.x1} y1={edge.y1} x2={edge.x2} y2={edge.y2} class="edge-line" />
       {/each}
 
       <!-- Sector rectangles -->

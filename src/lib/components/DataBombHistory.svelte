@@ -61,7 +61,9 @@
             <span class="item-badge">{typeBadge(record.type)}</span>
             <span class="item-time">{formatTime(record.timestamp)}</span>
             <span class="item-meta">
-              <span class="affected-count" class:manifesto={record.type === 'manifesto'}>{record.affectedAgentIds.length}</span> hit
+              <span class="affected-count" class:manifesto={record.type === 'manifesto'}
+                >{record.affectedAgentIds.length}</span
+              > hit
             </span>
             <span class="expand-arrow">{expandedId === record.id ? '▾' : '▸'}</span>
           </button>

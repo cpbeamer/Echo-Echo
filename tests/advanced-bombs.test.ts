@@ -22,7 +22,7 @@ describe('Advanced Data Bombs', () => {
       };
 
       // Standard delta = 0.05, manifesto delta = 0.10 (2×)
-      detonateDataBomb(agents, bomb, 0.10);
+      detonateDataBomb(agents, bomb, 0.1);
 
       // With delta=0.10 and 7 order keywords, the shift = 7 × 0.10 = 0.70
       // Starting from 0.5, shifted toward 0: 0.5 - 0.70 = -0.20, clamped to 0 → shift = 0.5
@@ -31,9 +31,9 @@ describe('Advanced Data Bombs', () => {
     });
 
     it('manifesto mutation is strictly stronger than standard for the same text', () => {
-      // Standard bomb
+      // Standard bomb — pin starting DNA to midpoint for deterministic comparison
       const standardAgent = createAgent(50, 50);
-      const originalStdOC = standardAgent.vector.order_chaos;
+      standardAgent.vector.order_chaos = 0.5;
       const standardBomb: DataBomb = {
         text: 'chaos freedom anarchy rebellion revolution',
         target: { x: 50, y: 50 },
@@ -41,20 +41,20 @@ describe('Advanced Data Bombs', () => {
         type: 'standard',
       };
       detonateDataBomb([standardAgent], standardBomb);
-      const standardShift = Math.abs(standardAgent.vector.order_chaos - originalStdOC);
+      const standardShift = Math.abs(standardAgent.vector.order_chaos - 0.5);
 
-      // Manifesto bomb with 2× delta
+      // Manifesto bomb with 2× delta — same starting DNA
       resetAgentIdCounter();
       const manifestoAgent = createAgent(50, 50);
-      const originalManOC = manifestoAgent.vector.order_chaos;
+      manifestoAgent.vector.order_chaos = 0.5;
       const manifestoBomb: DataBomb = {
         text: 'chaos freedom anarchy rebellion revolution',
         target: { x: 50, y: 50 },
         radius: 5,
         type: 'manifesto',
       };
-      detonateDataBomb([manifestoAgent], manifestoBomb, 0.10);
-      const manifestoShift = Math.abs(manifestoAgent.vector.order_chaos - originalManOC);
+      detonateDataBomb([manifestoAgent], manifestoBomb, 0.1);
+      const manifestoShift = Math.abs(manifestoAgent.vector.order_chaos - 0.5);
 
       expect(manifestoShift).toBeGreaterThan(standardShift);
     });
@@ -138,7 +138,7 @@ describe('Advanced Data Bombs', () => {
 
       // Use a large delta so the mutation is clearly visible
       // 6 altruism keywords × 0.20 = -1.2, clamped from 0.5 → 0.0 = shift of 0.5
-      detonateDataBomb(agents, bomb, 0.20);
+      detonateDataBomb(agents, bomb, 0.2);
 
       const shift0 = Math.abs(agents[0].vector.altruistic_selfish - 0.5);
       const shift1 = Math.abs(agents[1].vector.altruistic_selfish - 0.5);

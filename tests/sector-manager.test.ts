@@ -180,11 +180,7 @@ describe('SectorManager', () => {
 
   describe('computeDominantFaction', () => {
     it('returns the faction with most agents', () => {
-      const agents = [
-        createAgent(10, 10),
-        createAgent(20, 20),
-        createAgent(30, 30),
-      ];
+      const agents = [createAgent(10, 10), createAgent(20, 20), createAgent(30, 30)];
       // Force factions
       agents[0].faction = 'hive';
       agents[1].faction = 'hive';

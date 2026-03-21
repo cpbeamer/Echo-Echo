@@ -18,11 +18,7 @@
 
     // Find Y axis range from alive counts
     const maxAlive = Math.max(...history.map((h) => h.alive), 1);
-    const maxEvents = Math.max(
-      ...history.map((h) => h.births),
-      ...history.map((h) => h.deaths),
-      1,
-    );
+    const maxEvents = Math.max(...history.map((h) => h.births), ...history.map((h) => h.deaths), 1);
 
     // Scale tick to X position
     const tickMin = history[0].tick;
@@ -76,14 +72,14 @@
       class="chart-svg"
     >
       <!-- Y-axis labels -->
-      {#each chart.yLabels as yl}
+      {#each chart.yLabels as yl (yl.label)}
         <text x={chart.padding.left - 3} y={yl.y + 3} class="axis-label" text-anchor="end">
           {yl.label}
         </text>
       {/each}
 
       <!-- X-axis labels -->
-      {#each chart.xLabels as xl, i}
+      {#each chart.xLabels as xl, i (xl.label)}
         <text
           x={xl.x}
           y={chart.height - 1}

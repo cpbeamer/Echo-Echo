@@ -62,16 +62,16 @@ describe('Meme Swap', () => {
     a.vector = { analytical_emotional: 0, altruistic_selfish: 0, order_chaos: 0 };
     b.vector = { analytical_emotional: 1, altruistic_selfish: 1, order_chaos: 1 };
 
-    a.lingo = { 'term': 'meaning' };
-    b.lingo = { 'other': 'meaning' };
+    a.lingo = { term: 'meaning' };
+    b.lingo = { other: 'meaning' };
 
     // With maximally different agents, similarity is ~0 so swap should almost never happen
     // Run multiple times to verify at least most return null
     let nullCount = 0;
     for (let i = 0; i < 100; i++) {
       // Reset lingo each time
-      a.lingo = { 'term': 'meaning' };
-      b.lingo = { 'other': 'meaning' };
+      a.lingo = { term: 'meaning' };
+      b.lingo = { other: 'meaning' };
       const result = attemptMemeSwap(a, b);
       if (result === null) nullCount++;
     }

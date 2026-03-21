@@ -33,10 +33,7 @@ export async function disconnectFromPetalsSwarm(): Promise<void> {
  * Send a prompt to the distributed Petals relay for inference.
  * Returns the generated text, or `null` if the request fails.
  */
-export async function generateDistributed(
-  model: string,
-  prompt: string,
-): Promise<string | null> {
+export async function generateDistributed(model: string, prompt: string): Promise<string | null> {
   try {
     return await invoke<string>('generate_distributed', { model, prompt });
   } catch (error) {
@@ -46,10 +43,7 @@ export async function generateDistributed(
 }
 
 /** Announce this peer's GPU capacity to the swarm. */
-export async function reportCapability(
-  vramMb: number,
-  layersHosted: number,
-): Promise<void> {
+export async function reportCapability(vramMb: number, layersHosted: number): Promise<void> {
   try {
     await invoke<void>('report_capability', { vramMb, layersHosted });
   } catch (error) {

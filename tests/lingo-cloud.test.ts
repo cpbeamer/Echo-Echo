@@ -72,9 +72,9 @@ describe('extractLingoCloud', () => {
     const b = createAgent(6, 6);
     const c = createAgent(7, 7);
 
-    a.lingo = { 'Sec-Jedi': 'A leader', 'common': 'shared' };
-    b.lingo = { 'Void-Born': 'A nihilist', 'common': 'shared' };
-    c.lingo = { 'common': 'shared', 'rare': 'unique' };
+    a.lingo = { 'Sec-Jedi': 'A leader', common: 'shared' };
+    b.lingo = { 'Void-Born': 'A nihilist', common: 'shared' };
+    c.lingo = { common: 'shared', rare: 'unique' };
 
     const cloud = extractLingoCloud([a, b, c], 3);
 
@@ -95,7 +95,7 @@ describe('extractLingoCloud', () => {
 
   it('respects the topN limit', () => {
     const a = createAgent(5, 5);
-    a.lingo = { 'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5' };
+    a.lingo = { a: '1', b: '2', c: '3', d: '4', e: '5' };
 
     const cloud = extractLingoCloud([a], 2);
 

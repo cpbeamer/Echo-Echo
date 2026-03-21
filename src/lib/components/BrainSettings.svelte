@@ -37,7 +37,8 @@
       <span
         class="brain-settings__indicator"
         class:brain-settings__indicator--connected={brainSettings.ollamaStatus === 'connected'}
-        class:brain-settings__indicator--disconnected={brainSettings.ollamaStatus === 'disconnected'}
+        class:brain-settings__indicator--disconnected={brainSettings.ollamaStatus ===
+          'disconnected'}
         class:brain-settings__indicator--checking={brainSettings.ollamaStatus === 'checking'}
       ></span>
       <span class="brain-settings__status-text">
@@ -174,8 +175,13 @@
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
   }
 
   .brain-settings__status-text {
@@ -191,7 +197,9 @@
     background: transparent;
     color: var(--text, #cdd6f4);
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
   }
 
   .brain-settings__refresh-btn:hover:not(:disabled) {

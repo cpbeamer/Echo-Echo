@@ -18,9 +18,9 @@ vi.mock('../src/engine/ollama-client', () => ({
 
 // Mock the context-truncator to passthrough
 vi.mock('../src/engine/context-truncator', () => ({
-  truncateLoreCache: vi.fn().mockImplementation((loreCache: string[]) =>
-    Promise.resolve(loreCache),
-  ),
+  truncateLoreCache: vi
+    .fn()
+    .mockImplementation((loreCache: string[]) => Promise.resolve(loreCache)),
 }));
 
 const TEST_SETTINGS: BrainSettings = {

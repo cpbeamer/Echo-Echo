@@ -90,9 +90,7 @@ export function createChildAgent(
     altruistic_selfish: clamp01(
       (parentA.vector.altruistic_selfish + parentB.vector.altruistic_selfish) / 2 + jitter(),
     ),
-    order_chaos: clamp01(
-      (parentA.vector.order_chaos + parentB.vector.order_chaos) / 2 + jitter(),
-    ),
+    order_chaos: clamp01((parentA.vector.order_chaos + parentB.vector.order_chaos) / 2 + jitter()),
   };
 
   const faction = classifyFaction(vector);
