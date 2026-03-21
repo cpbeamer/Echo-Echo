@@ -68,7 +68,7 @@ fn strip_html_tags(html: &str) -> String {
     let mut tag_buf = String::new();
     let mut is_closing_tag = false;
 
-    while let Some(ch) = chars.next() {
+    for ch in chars {
         if ch == '<' {
             in_tag = true;
             tag_buf.clear();

@@ -22,6 +22,7 @@ pub struct PeerCapability {
 }
 
 /// Shared state for the Petals distributed inference subsystem.
+#[derive(Default)]
 pub struct PetalsState {
     /// Whether we are connected to the Petals swarm.
     is_connected: bool,
@@ -29,16 +30,6 @@ pub struct PetalsState {
     local_capability: Option<PeerCapability>,
     /// Known peer capabilities (peerId → capability).
     peer_capabilities: HashMap<String, PeerCapability>,
-}
-
-impl Default for PetalsState {
-    fn default() -> Self {
-        Self {
-            is_connected: false,
-            local_capability: None,
-            peer_capabilities: HashMap::new(),
-        }
-    }
 }
 
 /// Thread-safe wrapper for Tauri managed state.
@@ -106,7 +97,7 @@ pub async fn generate_distributed(
     drop(petals);
 
     // Proxy to local Ollama for now (same as ollama::generate_completion)
-    let url = format!("http://localhost:11434/api/generate");
+    let url = "http://localhost:11434/api/generate".to_string();
     let client = reqwest::Client::new();
 
     let body = serde_json::json!({

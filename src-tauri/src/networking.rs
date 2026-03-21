@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
 // ── Public Types ────────────────────────────────────────────────────────────
@@ -213,12 +213,7 @@ pub async fn broadcast_state(
 pub async fn spawn_sector(
     state: tauri::State<'_, SharedNetworkState>,
     app: AppHandle,
-    sector_id: String,
-    host_peer_id: String,
-    origin_x: f64,
-    origin_y: f64,
-    width: f64,
-    height: f64,
+    entry: SectorEntry,
 ) -> Result<(), String> {
     let mut net = state.lock().await;
 
@@ -226,14 +221,8 @@ pub async fn spawn_sector(
         return Err("Network is not active".to_string());
     }
 
-    let entry = SectorEntry {
-        sector_id: sector_id.clone(),
-        host_peer_id: host_peer_id.clone(),
-        origin_x,
-        origin_y,
-        width,
-        height,
-    };
+    let sector_id = entry.sector_id.clone();
+    let host_peer_id = entry.host_peer_id.clone();
 
     net.sectors.insert(sector_id.clone(), entry);
 
