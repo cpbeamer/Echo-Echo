@@ -40,6 +40,7 @@ import { brainSettings } from './brain-settings.svelte';
 import { newsfeed } from './newsfeed.svelte';
 import { networking } from './networking.svelte';
 import { computeLingoLeaderboard } from '../../engine/lingo-leaderboard';
+import { audio } from './audio.svelte';
 
 export type SimulationSpeed = 0 | 1 | 2 | 5;
 
@@ -275,6 +276,7 @@ class SimulationState {
     ];
 
     this.isPickingTarget = false;
+    audio.playSfx('data_bomb');
 
     // Manifesto defusal: if dropped in a contested sector, start defusal (Epic 3.2)
     if (isManifesto && checkContestedSector(this.agents)) {
@@ -396,6 +398,7 @@ class SimulationState {
     if (this.tick % 5 === 0) {
       const swapResults: MemeSwapResult[] = processMemeSwaps(this.aliveAgents);
       if (swapResults.length > 0) {
+        audio.playSfx('meme_swap');
         newsfeed.push({
           type: 'meme_swap',
           message: `🔄 ${swapResults.length} meme swap${swapResults.length > 1 ? 's' : ''} this tick`,
@@ -413,6 +416,7 @@ class SimulationState {
       if (newborns.length > 0) {
         this.agents = [...this.agents, ...newborns];
         this.birthsSinceSnapshot += newborns.length;
+        audio.playSfx('birth');
 
         for (const child of newborns) {
           newsfeed.push({
@@ -434,6 +438,7 @@ class SimulationState {
         for (const id of consumedIds) {
           conflictKilledIds.add(id);
         }
+        audio.playSfx('conflict');
         newsfeed.push({
           type: 'conflict',
           message: `⚔️ Conflict between ${conflict.dominant.length + conflict.submissive.length} agents`,
@@ -454,6 +459,7 @@ class SimulationState {
 
         const cause = conflictKilledIds.has(agent.id) ? 'conflict' : 'energy_depleted';
         conflictKilledIds.delete(agent.id);
+        audio.playSfx('agent_death');
         newsfeed.push({
           type: 'agent_death',
           message: `💀 Agent #${agent.id.slice(-4)} perished (${cause})`,
@@ -487,6 +493,15 @@ class SimulationState {
 
       this.birthsSinceSnapshot = 0;
       this.deathsSinceSnapshot = 0;
+    }
+
+    // Audio ambient update (synced with auto-think interval)
+    if (this.tick % AUTO_THINK_INTERVAL === 0) {
+      audio.updateFromSimulation(
+        this.averagePeaceScore,
+        this.factionCounts,
+        this.aliveAgents.length,
+      );
     }
 
     // Auto-think: enqueue a random batch of agents for LLM thought

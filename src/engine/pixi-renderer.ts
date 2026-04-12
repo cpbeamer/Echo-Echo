@@ -9,6 +9,7 @@
 import { Application, Container, Graphics, Text, TextStyle, type ColorSource } from 'pixi.js';
 import type { Agent, Shockwave, LingoSwapBubble } from '../types';
 import { FACTION_META } from './factions';
+import type { HeatmapGrid, FactionHeatmapGrid } from './heatmap';
 
 /** Duration of the death dissolve animation in renderer frames. Must match DEATH_ANIM_TICKS in simulation store. */
 const DEATH_ANIM_FRAMES = 20;
@@ -64,6 +65,10 @@ export class PixiRenderer {
   private crosshairVisible = false;
   private lingoBubbles: BubbleNode[] = [];
 
+  /** Heatmap overlay layer, rendered between grid lines and agents. */
+  private heatmapGraphics: Graphics = new Graphics();
+  private heatmapVisible = false;
+
   /** Elapsed time counter for wobble oscillation. */
   private elapsedTime = 0;
 
@@ -110,6 +115,10 @@ export class PixiRenderer {
 
     // Draw static background into viewport
     this.drawBackground();
+
+    // Heatmap overlay (between grid and agents, hidden by default)
+    this.heatmapGraphics.visible = false;
+    this.viewport.addChild(this.heatmapGraphics);
 
     // Crosshair lives in the stage (screen space), above everything
     this.crosshair.visible = false;
@@ -256,6 +265,88 @@ export class PixiRenderer {
       x: (screenX - this.camera.x) / this.camera.zoom,
       y: (screenY - this.camera.y) / this.camera.zoom,
     };
+  }
+
+  /** Toggle the heatmap overlay visibility. */
+  setHeatmapVisible(visible: boolean): void {
+    this.heatmapVisible = visible;
+    this.heatmapGraphics.visible = visible;
+  }
+
+  /**
+   * Sync the heatmap overlay with computed density data.
+   * Supports density/peace_war grids (single-channel) and faction grids (RGB).
+   */
+  syncHeatmap(
+    grid: HeatmapGrid | null,
+    factionGrid: FactionHeatmapGrid | null,
+    mode: string,
+    opacity: number,
+  ): void {
+    this.heatmapGraphics.clear();
+    if (!this.heatmapVisible) return;
+
+    if (mode === 'faction' && factionGrid) {
+      this.drawFactionHeatmap(factionGrid, opacity);
+    } else if (grid) {
+      this.drawScalarHeatmap(grid, mode, opacity);
+    }
+  }
+
+  /** Draw a single-channel heatmap (density or peace_war). */
+  private drawScalarHeatmap(grid: HeatmapGrid, mode: string, opacity: number): void {
+    const cellW = this.gridWidth / grid.width;
+    const cellH = this.gridHeight / grid.height;
+
+    for (let y = 0; y < grid.height; y++) {
+      for (let x = 0; x < grid.width; x++) {
+        const value = grid.data[y * grid.width + x];
+        if (value < 0.01) continue;
+
+        let color: number;
+        if (mode === 'peace_war') {
+          // Blue (peace) → Red (war)
+          const r = Math.round(value * 255);
+          const b = Math.round((1 - value) * 255);
+          color = (r << 16) | (60 << 8) | b;
+        } else {
+          // Density: dark blue → yellow (viridis-like)
+          const r = Math.round(value * 230 + 10);
+          const g = Math.round(value * 200 + 20);
+          const b = Math.round((1 - value) * 180 + 30);
+          color = (r << 16) | (g << 8) | b;
+        }
+
+        this.heatmapGraphics
+          .rect(x * cellW, y * cellH, cellW, cellH)
+          .fill({ color, alpha: value * opacity });
+      }
+    }
+  }
+
+  /** Draw a faction-colored RGB heatmap. */
+  private drawFactionHeatmap(grid: FactionHeatmapGrid, opacity: number): void {
+    const cellW = this.gridWidth / grid.width;
+    const cellH = this.gridHeight / grid.height;
+
+    for (let y = 0; y < grid.height; y++) {
+      for (let x = 0; x < grid.width; x++) {
+        const i = y * grid.width + x;
+        const r = grid.r[i];
+        const g = grid.g[i];
+        const b = grid.b[i];
+
+        const intensity = Math.max(r, g, b);
+        if (intensity < 0.01) continue;
+
+        const color =
+          (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
+
+        this.heatmapGraphics
+          .rect(x * cellW, y * cellH, cellW, cellH)
+          .fill({ color, alpha: intensity * opacity });
+      }
+    }
   }
 
   /** Clean up all PixiJS resources. */

@@ -1,15 +1,27 @@
-//! P2P Networking – LibP2P swarm management for sector-based multiplayer.
+//! P2P Networking – Real LibP2P swarm for sector-based multiplayer.
 //!
 //! Uses mDNS for LAN peer discovery, Noise for encrypted transport,
 //! Yamux for stream multiplexing, and GossipSub for broadcasting state diffs.
+//! The swarm runs in a dedicated tokio task; Tauri commands communicate via
+//! an mpsc channel.
 
+use libp2p::{
+    gossipsub, identify, mdns, noise,
+    swarm::{NetworkBehaviour, SwarmEvent},
+    tcp, yamux, Multiaddr, PeerId, Swarm, SwarmBuilder,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 
-// ── Public Types ────────────────────────────────────────────────────────────
+// ── Gossipsub topic name ───────────────────────────────────────────────────
+
+const GOSSIP_TOPIC: &str = "synaptic-sandbox/state";
+
+// ── Public Types ───────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerInfo {
@@ -30,9 +42,27 @@ pub struct SectorEntry {
     pub height: f64,
 }
 
+// ── Swarm Behaviour ────────────────────────────────────────────────────────
+
+#[derive(NetworkBehaviour)]
+struct SandboxBehaviour {
+    gossipsub: gossipsub::Behaviour,
+    mdns: mdns::tokio::Behaviour,
+    identify: identify::Behaviour,
+}
+
+// ── Commands sent from Tauri handlers to the swarm task ────────────────────
+
+enum SwarmCommand {
+    BroadcastState { diff_json: String },
+    Shutdown,
+}
+
+// ── Network State ──────────────────────────────────────────────────────────
+
 /// Shared network state managed by Tauri.
 pub struct NetworkState {
-    /// Our own peer ID (set when the network starts).
+    /// Our own peer ID.
     peer_id: Option<String>,
     /// Currently known peers on the LAN.
     connected_peers: HashMap<String, PeerInfo>,
@@ -42,8 +72,12 @@ pub struct NetworkState {
     hosted_sector: Option<String>,
     /// Our current role.
     role: String,
-    /// All registered sectors in the global map (Epic 3.1).
+    /// All registered sectors in the global map.
     sectors: HashMap<String, SectorEntry>,
+    /// Channel to send commands to the running swarm task.
+    command_tx: Option<mpsc::Sender<SwarmCommand>>,
+    /// Handle to the swarm task for cleanup.
+    swarm_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Default for NetworkState {
@@ -55,6 +89,8 @@ impl Default for NetworkState {
             hosted_sector: None,
             role: "disconnected".to_string(),
             sectors: HashMap::new(),
+            command_tx: None,
+            swarm_handle: None,
         }
     }
 }
@@ -62,44 +98,233 @@ impl Default for NetworkState {
 /// Thread-safe wrapper around NetworkState for Tauri managed state.
 pub type SharedNetworkState = Arc<Mutex<NetworkState>>;
 
-// ── Helper: generate a deterministic-looking peer ID ────────────────────────
+// ── Swarm event loop ───────────────────────────────────────────────────────
 
-fn generate_peer_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .subsec_nanos();
-    format!("12D3KooW{:016x}", nanos as u64 ^ 0xDEAD_BEEF_CAFE_1234)
+/// Spawn the libp2p swarm in a background tokio task.
+/// Returns the local PeerId and a command channel sender.
+async fn spawn_swarm(
+    app: AppHandle,
+    state: SharedNetworkState,
+) -> Result<(String, mpsc::Sender<SwarmCommand>), String> {
+    let mut swarm = SwarmBuilder::with_new_identity()
+        .with_tokio()
+        .with_tcp(
+            tcp::Config::default(),
+            noise::Config::new,
+            yamux::Config::default,
+        )
+        .map_err(|e| format!("TCP transport error: {e}"))?
+        .with_behaviour(|key| {
+            // GossipSub with default config
+            let gossipsub_config = gossipsub::ConfigBuilder::default()
+                .heartbeat_interval(Duration::from_secs(1))
+                .validation_mode(gossipsub::ValidationMode::Permissive)
+                .build()
+                .expect("valid gossipsub config");
+
+            let gossipsub = gossipsub::Behaviour::new(
+                gossipsub::MessageAuthenticity::Signed(key.clone()),
+                gossipsub_config,
+            )
+            .expect("valid gossipsub behaviour");
+
+            let mdns =
+                mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id())
+                    .expect("valid mDNS behaviour");
+
+            let identify = identify::Behaviour::new(identify::Config::new(
+                "/synaptic-sandbox/1.0.0".to_string(),
+                key.public(),
+            ));
+
+            Ok(SandboxBehaviour {
+                gossipsub,
+                mdns,
+                identify,
+            })
+        })
+        .map_err(|e| format!("Behaviour error: {e}"))?
+        .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
+        .build();
+
+    // Subscribe to our gossipsub topic
+    let topic = gossipsub::IdentTopic::new(GOSSIP_TOPIC);
+    swarm
+        .behaviour_mut()
+        .gossipsub
+        .subscribe(&topic)
+        .map_err(|e| format!("GossipSub subscribe error: {e}"))?;
+
+    // Listen on a random TCP port
+    swarm
+        .listen_on("/ip4/0.0.0.0/tcp/0".parse::<Multiaddr>().unwrap())
+        .map_err(|e| format!("Listen error: {e}"))?;
+
+    let local_peer_id = *swarm.local_peer_id();
+    let peer_id_str = local_peer_id.to_string();
+
+    let (cmd_tx, mut cmd_rx) = mpsc::channel::<SwarmCommand>(64);
+
+    let app_clone = app.clone();
+    let state_clone = state.clone();
+    let peer_id_for_task = peer_id_str.clone();
+
+    // Spawn the event loop
+    let handle = tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                event = swarm.select_next_some() => {
+                    match event {
+                        SwarmEvent::Behaviour(SandboxBehaviourEvent::Mdns(
+                            mdns::Event::Discovered(list),
+                        )) => {
+                            for (peer_id, addr) in list {
+                                let pid = peer_id.to_string();
+                                log::info!("mDNS discovered: {pid} at {addr}");
+
+                                // Add to gossipsub
+                                swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .add_explicit_peer(&peer_id);
+
+                                // Update state
+                                {
+                                    let mut net = state_clone.lock().await;
+                                    net.connected_peers.insert(
+                                        pid.clone(),
+                                        PeerInfo {
+                                            peer_id: pid.clone(),
+                                            role: "visitor".to_string(),
+                                            sector_id: None,
+                                            latency_ms: 0.0,
+                                        },
+                                    );
+                                }
+
+                                let _ = app_clone.emit(
+                                    "network://peer-joined",
+                                    serde_json::json!({ "peerId": &pid }),
+                                );
+                            }
+
+                            // Update status to connected if we have peers
+                            let _ = app_clone.emit(
+                                "network://status",
+                                serde_json::json!({
+                                    "status": "connected",
+                                    "peerId": &peer_id_for_task,
+                                }),
+                            );
+                        }
+                        SwarmEvent::Behaviour(SandboxBehaviourEvent::Mdns(
+                            mdns::Event::Expired(list),
+                        )) => {
+                            for (peer_id, _addr) in list {
+                                let pid = peer_id.to_string();
+                                log::info!("mDNS expired: {pid}");
+
+                                swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .remove_explicit_peer(&peer_id);
+
+                                {
+                                    let mut net = state_clone.lock().await;
+                                    net.connected_peers.remove(&pid);
+                                }
+
+                                let _ = app_clone.emit(
+                                    "network://peer-left",
+                                    serde_json::json!({ "peerId": &pid }),
+                                );
+                            }
+                        }
+                        SwarmEvent::Behaviour(SandboxBehaviourEvent::Gossipsub(
+                            gossipsub::Event::Message {
+                                message, ..
+                            },
+                        )) => {
+                            if let Ok(diff_str) = String::from_utf8(message.data.clone()) {
+                                let _ = app_clone.emit(
+                                    "network://state-update",
+                                    serde_json::json!({ "diff": diff_str }),
+                                );
+                            }
+                        }
+                        SwarmEvent::Behaviour(SandboxBehaviourEvent::Identify(
+                            identify::Event::Received { peer_id, info, .. },
+                        )) => {
+                            log::info!(
+                                "Identified peer {}: {} with {} addrs",
+                                peer_id,
+                                info.protocol_version,
+                                info.listen_addrs.len()
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+                cmd = cmd_rx.recv() => {
+                    match cmd {
+                        Some(SwarmCommand::BroadcastState { diff_json }) => {
+                            let topic = gossipsub::IdentTopic::new(GOSSIP_TOPIC);
+                            if let Err(e) = swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(topic, diff_json.as_bytes())
+                            {
+                                log::warn!("GossipSub publish error: {e}");
+                            }
+                        }
+                        Some(SwarmCommand::Shutdown) | None => {
+                            log::info!("Swarm shutting down");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Store handle in state
+    {
+        let mut net = state.lock().await;
+        net.swarm_handle = Some(handle);
+    }
+
+    Ok((peer_id_str, cmd_tx))
 }
 
-// ── Tauri Commands ──────────────────────────────────────────────────────────
+// ── Tauri Commands ─────────────────────────────────────────────────────────
 
 /// Start the P2P network subsystem.
 ///
-/// Initializes mDNS discovery and begins listening for peers on the LAN.
-/// In this implementation we use Tauri-managed state rather than a live
-/// LibP2P swarm so that the frontend can be developed and tested without
-/// requiring a full LibP2P build. The architecture is designed so that
-/// swapping in a real swarm later is a drop-in replacement.
+/// Initializes a real libp2p swarm with mDNS discovery and GossipSub.
 #[tauri::command]
 pub async fn start_network(
     state: tauri::State<'_, SharedNetworkState>,
     app: AppHandle,
 ) -> Result<String, String> {
-    let mut net = state.lock().await;
-
-    if net.is_active {
-        return Err("Network is already active".to_string());
+    {
+        let net = state.lock().await;
+        if net.is_active {
+            return Err("Network is already active".to_string());
+        }
     }
 
-    let peer_id = generate_peer_id();
-    net.peer_id = Some(peer_id.clone());
-    net.is_active = true;
-    net.role = "disconnected".to_string();
-    net.connected_peers.clear();
+    let shared = (*state).clone();
+    let (peer_id, cmd_tx) = spawn_swarm(app.clone(), shared).await?;
 
-    // Emit a status event to the frontend
+    {
+        let mut net = state.lock().await;
+        net.peer_id = Some(peer_id.clone());
+        net.is_active = true;
+        net.role = "disconnected".to_string();
+        net.connected_peers.clear();
+        net.command_tx = Some(cmd_tx);
+    }
+
     let _ = app.emit(
         "network://status",
         serde_json::json!({
@@ -117,24 +342,37 @@ pub async fn stop_network(
     state: tauri::State<'_, SharedNetworkState>,
     app: AppHandle,
 ) -> Result<(), String> {
-    let mut net = state.lock().await;
+    let (tx, handle) = {
+        let mut net = state.lock().await;
+        if !net.is_active {
+            return Err("Network is not active".to_string());
+        }
+        (net.command_tx.take(), net.swarm_handle.take())
+    };
 
-    if !net.is_active {
-        return Err("Network is not active".to_string());
+    // Signal the swarm to shut down
+    if let Some(tx) = tx {
+        let _ = tx.send(SwarmCommand::Shutdown).await;
     }
 
-    net.is_active = false;
-    net.peer_id = None;
-    net.connected_peers.clear();
-    net.hosted_sector = None;
-    net.role = "disconnected".to_string();
-    net.sectors.clear();
+    // Wait for clean exit
+    if let Some(handle) = handle {
+        let _ = handle.await;
+    }
+
+    {
+        let mut net = state.lock().await;
+        net.is_active = false;
+        net.peer_id = None;
+        net.connected_peers.clear();
+        net.hosted_sector = None;
+        net.role = "disconnected".to_string();
+        net.sectors.clear();
+    }
 
     let _ = app.emit(
         "network://status",
-        serde_json::json!({
-            "status": "offline",
-        }),
+        serde_json::json!({ "status": "offline" }),
     );
 
     Ok(())
@@ -187,10 +425,7 @@ pub async fn host_sector(
     Ok(())
 }
 
-/// Broadcast a serialized state diff to all connected visitors.
-///
-/// In a full LibP2P implementation this would publish to the GossipSub topic.
-/// Currently it emits a Tauri event that the frontend can use for testing.
+/// Broadcast a serialized state diff to all connected peers via GossipSub.
 #[tauri::command]
 pub async fn broadcast_state(
     state: tauri::State<'_, SharedNetworkState>,
@@ -207,18 +442,25 @@ pub async fn broadcast_state(
         return Err("Only hosts can broadcast state".to_string());
     }
 
-    // In production this would go over GossipSub; for now emit locally
+    // Send to swarm task for GossipSub publishing
+    if let Some(tx) = &net.command_tx {
+        tx.send(SwarmCommand::BroadcastState {
+            diff_json: diff_json.clone(),
+        })
+        .await
+        .map_err(|e| format!("Failed to send broadcast command: {e}"))?;
+    }
+
+    // Also emit locally for the host's own frontend
     let _ = app.emit(
         "network://state-update",
-        serde_json::json!({
-            "diff": diff_json,
-        }),
+        serde_json::json!({ "diff": diff_json }),
     );
 
     Ok(())
 }
 
-// ── Sector Expansion (Epic 3.1) ────────────────────────────────────────────
+// ── Sector Expansion (Epic 3.1) ───────────────────────────────────────────
 
 /// Register a new sector in the global map.
 #[tauri::command]
@@ -264,9 +506,7 @@ pub async fn remove_sector(
 
     let _ = app.emit(
         "network://sector-removed",
-        serde_json::json!({
-            "sectorId": &sector_id,
-        }),
+        serde_json::json!({ "sectorId": &sector_id }),
     );
 
     Ok(())
@@ -279,4 +519,54 @@ pub async fn get_sectors(
 ) -> Result<Vec<SectorEntry>, String> {
     let net = state.lock().await;
     Ok(net.sectors.values().cloned().collect())
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_network_state_default() {
+        let state = NetworkState::default();
+        assert!(!state.is_active);
+        assert_eq!(state.role, "disconnected");
+        assert!(state.peer_id.is_none());
+        assert!(state.connected_peers.is_empty());
+        assert!(state.sectors.is_empty());
+    }
+
+    #[test]
+    fn test_sector_entry_serialization() {
+        let entry = SectorEntry {
+            sector_id: "sector-1".to_string(),
+            host_peer_id: "12D3KooW123".to_string(),
+            origin_x: 0.0,
+            origin_y: 0.0,
+            width: 50.0,
+            height: 50.0,
+        };
+
+        let json = serde_json::to_string(&entry).unwrap();
+        let deserialized: SectorEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(entry.sector_id, deserialized.sector_id);
+        assert_eq!(entry.host_peer_id, deserialized.host_peer_id);
+    }
+
+    #[test]
+    fn test_peer_info_serialization() {
+        let info = PeerInfo {
+            peer_id: "12D3KooW456".to_string(),
+            role: "host".to_string(),
+            sector_id: Some("sector-a".to_string()),
+            latency_ms: 12.5,
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        let deserialized: PeerInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(info.peer_id, deserialized.peer_id);
+        assert_eq!(info.role, deserialized.role);
+        assert_eq!(info.latency_ms, deserialized.latency_ms);
+    }
 }
