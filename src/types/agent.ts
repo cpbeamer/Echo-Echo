@@ -257,6 +257,4 @@ export interface DnaImportOptions {
 }
 
 /** Discriminated result from `.dna` file validation. */
-export type DnaValidationResult =
-  | { valid: true; file: DnaFile }
-  | { valid: false; error: string };
+export type DnaValidationResult = { valid: true; file: DnaFile } | { valid: false; error: string };

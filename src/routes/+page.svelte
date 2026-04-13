@@ -8,8 +8,11 @@
   import Newsfeed from '$lib/components/Newsfeed.svelte';
   import GlobalStats from '$lib/components/GlobalStats.svelte';
   import PopulationChart from '$lib/components/PopulationChart.svelte';
+  import NetworkPanel from '$lib/components/NetworkPanel.svelte';
+  import HeatmapOverlay from '$lib/components/HeatmapOverlay.svelte';
   import { simulation, type SimulationSpeed } from '$lib/stores/simulation.svelte';
   import { theme } from '$lib/stores/theme.svelte';
+  import { audio } from '$lib/stores/audio.svelte';
   import { FACTION_META } from '../engine/factions';
   import type { Vec2 } from '../types';
   import '../app.css';
@@ -24,6 +27,15 @@
   let showDropZone = $state(false);
   let pickedTarget: Vec2 | null = $state(null);
   let cameraState = $state({ x: 0, y: 0, zoom: 8 });
+
+  // Heatmap overlay state
+  let heatmapEnabled = $state(false);
+  let heatmapConfig = $state({
+    resolution: 2,
+    kernelRadius: 3,
+    mode: 'density' as 'density' | 'faction' | 'peace_war',
+  });
+  let heatmapOpacity = $state(0.4);
 
   function openDropZone() {
     pickedTarget = null;
@@ -89,6 +101,11 @@
         </span>
       {/each}
 
+      <!-- Audio Toggle -->
+      <button class="theme-toggle" onclick={() => audio.toggleMute()} title="Toggle audio">
+        {audio.muted ? '🔇' : '🔊'}
+      </button>
+
       <!-- Theme Toggle -->
       <button
         class="theme-toggle"
@@ -106,12 +123,24 @@
 
   <!-- Main Content -->
   <div class="main-content">
-    <Grid ontargetpick={handleTargetPick} oncamerachange={handleCameraChange} />
+    <Grid
+      ontargetpick={handleTargetPick}
+      oncamerachange={handleCameraChange}
+      {heatmapEnabled}
+      {heatmapConfig}
+      {heatmapOpacity}
+    />
     <LingoCloud camera={cameraState} />
     <Newsfeed />
     <DataBombHistory />
     <DNAInspector />
     <PopulationChart />
+    <NetworkPanel />
+    <HeatmapOverlay
+      bind:enabled={heatmapEnabled}
+      bind:config={heatmapConfig}
+      bind:opacity={heatmapOpacity}
+    />
   </div>
 
   <!-- Drop Zone Modal -->

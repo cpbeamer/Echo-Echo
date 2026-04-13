@@ -3,13 +3,25 @@
   import { simulation } from '$lib/stores/simulation.svelte';
   import { PixiRenderer } from '../../engine/pixi-renderer';
   import type { Vec2 } from '../../types';
+  import {
+    computeDensityHeatmap,
+    computeFactionHeatmap,
+    computePeaceWarHeatmap,
+    type HeatmapConfig,
+  } from '../../engine/heatmap';
 
   let {
     ontargetpick,
     oncamerachange,
+    heatmapEnabled = false,
+    heatmapConfig = { resolution: 2, kernelRadius: 3, mode: 'density' as HeatmapConfig['mode'] },
+    heatmapOpacity = 0.4,
   }: {
     ontargetpick?: (coord: Vec2) => void;
     oncamerachange?: (camera: { x: number; y: number; zoom: number }) => void;
+    heatmapEnabled?: boolean;
+    heatmapConfig?: { resolution: number; kernelRadius: number; mode: HeatmapConfig['mode'] };
+    heatmapOpacity?: number;
   } = $props();
 
   let container: HTMLDivElement;
@@ -69,6 +81,34 @@
   $effect(() => {
     const bubbles = simulation.activeLingoSwaps;
     renderer?.syncLingoBubbles(bubbles);
+  });
+
+  /** Sync heatmap visibility. */
+  $effect(() => {
+    renderer?.setHeatmapVisible(heatmapEnabled);
+  });
+
+  /** Recompute and sync heatmap overlay (throttled to every 10th tick). */
+  $effect(() => {
+    if (!heatmapEnabled || !renderer) return;
+
+    // Re-run when tick changes (but only render every 10th tick)
+    const tick = simulation.tick;
+    if (tick % 10 !== 0) return;
+
+    const agents = simulation.aliveAgents;
+    const { gridWidth, gridHeight } = simulation.config;
+
+    if (heatmapConfig.mode === 'faction') {
+      const fGrid = computeFactionHeatmap(agents, gridWidth, gridHeight, heatmapConfig);
+      renderer.syncHeatmap(null, fGrid, 'faction', heatmapOpacity);
+    } else if (heatmapConfig.mode === 'peace_war') {
+      const grid = computePeaceWarHeatmap(agents, gridWidth, gridHeight, heatmapConfig);
+      renderer.syncHeatmap(grid, null, 'peace_war', heatmapOpacity);
+    } else {
+      const grid = computeDensityHeatmap(agents, gridWidth, gridHeight, heatmapConfig);
+      renderer.syncHeatmap(grid, null, 'density', heatmapOpacity);
+    }
   });
 
   /** Handle mouse wheel for zoom. */

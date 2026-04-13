@@ -258,15 +258,15 @@ describe('importDnaFileAgents', () => {
   let validFile: DnaFile;
 
   beforeEach(() => {
-    const agents = [
-      makeTestAgent(),
-      makeTestAgent(),
-    ];
+    const agents = [makeTestAgent(), makeTestAgent()];
     validFile = serializeAgentsToDnaFile(agents, 'Import Test');
   });
 
   it('generates new unique IDs prefixed with "invader-"', () => {
-    const imported = importDnaFileAgents(validFile, { spawnPosition: { x: 50, y: 50 }, spreadRadius: 5 });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: { x: 50, y: 50 },
+      spreadRadius: 5,
+    });
 
     expect(imported).toHaveLength(2);
     expect(imported[0].id).toBe('invader-0');
@@ -278,7 +278,10 @@ describe('importDnaFileAgents', () => {
   it('places agents near the spawn position within spread radius', () => {
     const spawnPos = { x: 50, y: 50 };
     const radius = 5;
-    const imported = importDnaFileAgents(validFile, { spawnPosition: spawnPos, spreadRadius: radius });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: spawnPos,
+      spreadRadius: radius,
+    });
 
     for (const agent of imported) {
       const dx = agent.position.x - spawnPos.x;
@@ -289,7 +292,10 @@ describe('importDnaFileAgents', () => {
   });
 
   it('re-derives color from DNA vector', () => {
-    const imported = importDnaFileAgents(validFile, { spawnPosition: { x: 0, y: 0 }, spreadRadius: 1 });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: { x: 0, y: 0 },
+      spreadRadius: 1,
+    });
 
     for (const agent of imported) {
       expect(agent.color).toBe(dnaToColor(agent.vector));
@@ -297,7 +303,10 @@ describe('importDnaFileAgents', () => {
   });
 
   it('resets energy to 1.0', () => {
-    const imported = importDnaFileAgents(validFile, { spawnPosition: { x: 0, y: 0 }, spreadRadius: 1 });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: { x: 0, y: 0 },
+      spreadRadius: 1,
+    });
 
     for (const agent of imported) {
       expect(agent.energy).toBe(1.0);
@@ -305,7 +314,10 @@ describe('importDnaFileAgents', () => {
   });
 
   it('clears runtime state (velocity, adjacencyTicks, activityLevel, deathFrame)', () => {
-    const imported = importDnaFileAgents(validFile, { spawnPosition: { x: 0, y: 0 }, spreadRadius: 1 });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: { x: 0, y: 0 },
+      spreadRadius: 1,
+    });
 
     for (const agent of imported) {
       expect(agent.velocity).toEqual({ x: 0, y: 0 });
@@ -317,7 +329,10 @@ describe('importDnaFileAgents', () => {
   });
 
   it('preserves DNA identity fields (vector, loreCache, lingo, memory)', () => {
-    const imported = importDnaFileAgents(validFile, { spawnPosition: { x: 0, y: 0 }, spreadRadius: 1 });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: { x: 0, y: 0 },
+      spreadRadius: 1,
+    });
 
     for (let i = 0; i < imported.length; i++) {
       expect(imported[i].vector).toEqual(validFile.agents[i].vector);
@@ -328,7 +343,10 @@ describe('importDnaFileAgents', () => {
   });
 
   it('uses default config when none provided', () => {
-    const imported = importDnaFileAgents(validFile, { spawnPosition: { x: 0, y: 0 }, spreadRadius: 1 });
+    const imported = importDnaFileAgents(validFile, {
+      spawnPosition: { x: 0, y: 0 },
+      spreadRadius: 1,
+    });
 
     for (const agent of imported) {
       expect(agent.radius).toBe(DEFAULT_CONFIG.agentRadius);
