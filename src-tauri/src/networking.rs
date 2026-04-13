@@ -6,9 +6,10 @@
 //! an mpsc channel.
 
 use libp2p::{
+    futures::StreamExt,
     gossipsub, identify, mdns, noise,
     swarm::{NetworkBehaviour, SwarmEvent},
-    tcp, yamux, Multiaddr, PeerId, Swarm, SwarmBuilder,
+    tcp, yamux, Multiaddr, SwarmBuilder,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
