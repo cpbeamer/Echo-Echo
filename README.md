@@ -38,7 +38,7 @@ Agents are classified into four factions based on their DNA vectors:
 
 - [Node.js](https://nodejs.org/) 22+
 - [Rust](https://www.rust-lang.org/tools/install) 1.70+
-- [Ollama](https://ollama.ai/) (for local LLM inference)
+- [Ollama](https://ollama.ai/) >= 0.5.0 (for local LLM inference)
 - Platform-specific system libraries:
   - **Linux**: `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`, `libgtk-3-dev`
   - **Windows**: Visual C++ Build Tools

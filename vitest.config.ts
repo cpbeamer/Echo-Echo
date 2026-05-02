@@ -8,4 +8,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
   },
+  coverage: {
+    provider: 'v8',
+    include: ['src/engine/lifecycle.ts'],
+    thresholds: {
+      branches: 80,
+    },
+  },
 });
