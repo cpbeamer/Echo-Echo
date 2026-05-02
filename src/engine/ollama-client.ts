@@ -27,11 +27,16 @@ export async function listModels(): Promise<string[]> {
 
 /**
  * Send a prompt to Ollama and return the generated text.
- * Returns `null` if the request fails for any reason.
+ * Returns `null` if the request fails or the response schema is invalid.
  */
 export async function generateCompletion(model: string, prompt: string): Promise<string | null> {
   try {
-    return await invoke<string>('generate_completion', { model, prompt });
+    const result = await invoke<unknown>('generate_completion', { model, prompt });
+    if (typeof result !== 'string') {
+      console.error('[BRAIN-DEV] Ollama response schema invalid: expected string, got', typeof result);
+      return null;
+    }
+    return result;
   } catch (error) {
     console.error('[BRAIN-DEV] Ollama completion failed:', error);
     return null;

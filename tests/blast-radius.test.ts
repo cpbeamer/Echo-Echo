@@ -86,6 +86,7 @@ describe('detonateDataBomb', () => {
       text: 'Order, law, structure, discipline, rules, control, system',
       target: { x: 50, y: 50 },
       radius: 5,
+      type: 'standard',
     };
 
     const affectedIds = detonateDataBomb(agents, bomb);
@@ -111,6 +112,7 @@ describe('detonateDataBomb', () => {
       text: 'Some payload text.',
       target: { x: 50, y: 50 },
       radius: 5,
+      type: 'standard',
     };
 
     detonateDataBomb(agents, bomb);

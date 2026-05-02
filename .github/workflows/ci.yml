@@ -77,6 +77,10 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+      - name: Cargo Audit
+        working-directory: src-tauri
+        run: cargo audit
+
   build:
     name: Build (${{ matrix.os }})
     needs: [lint, test-frontend, rust-checks]
